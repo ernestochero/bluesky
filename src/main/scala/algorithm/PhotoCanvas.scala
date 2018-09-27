@@ -9,7 +9,7 @@ import javax.swing.JComponent
 
 class PhotoCanvas extends JComponent {
   var imagePath: Option[String] = None
-  val stream = this.getClass.getResourceAsStream("/exams/exam010201.png")
+  val stream = this.getClass.getResourceAsStream("/exams/examF.png")
 
   var image = loadScalaImage(stream)
 
@@ -62,6 +62,6 @@ class PhotoCanvas extends JComponent {
 
   override def paintComponent(graphics: Graphics): Unit = {
     super.paintComponent(graphics)
-    graphics.drawImage(image, 100, 10, this.image.getWidth , this.image.getHeight ,null)
+    graphics.drawImage(image, 100, 10, this.image.getWidth/2 , this.image.getHeight/2 ,null)
   }
 }

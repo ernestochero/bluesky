@@ -147,7 +147,7 @@ object Algorithm {
       // we need to add exception or failure
     }
 
-    val pointsWithCenter =  getCornersTuple(ids, corners.asScala.toList ).flatten{ v => Map(v._1.toInt -> getCenterSquare(v._2)) }.toMap
+    val pointsWithCenter =  getCornersTuple(ids, corners.asScala.toList ).flatten{ v => Map(v._1.toInt -> getCenterSquare(v._1.toInt,v._2)) }.toMap
     val codeMat = getSubMat(pointsWithCenter(CODE_10), pointsWithCenter(CODE_11), grayMat)
     val codeMatColor = getSubMat(pointsWithCenter(CODE_10), pointsWithCenter(CODE_11), colorMat)
     val answerMat = getSubMat(pointsWithCenter(ANSWER_20), pointsWithCenter(ANSWER_21), grayMat)
@@ -165,13 +165,20 @@ object Algorithm {
   }
 
 
-  def getCenterSquare(corner:Mat): (Int, Int) = {
+  def getCenterSquare(_id:Int, corner:Mat): (Int, Int) = {
     // size of mat = 4 x 1 => { (x1,y1) , (x2,y1) , (x2,y2) , (x1,y2) }
-    val x1_y1 = (corner.get(0,0)(0),corner.get(0,0)(1))
-    val x2_y2 = (corner.get(0,2)(0),corner.get(0,2)(1))
-    val xCenter = (x1_y1._1 + x2_y2._1) / 2
-    val yCenter = (x1_y1._2 + x2_y2._2) / 2
-    (xCenter.toInt , yCenter.toInt)
+    val x1_y1 = (corner.get(0,0)(0).toInt,corner.get(0,0)(1).toInt)
+    val x2_y2 = (corner.get(0,2)(0).toInt,corner.get(0,2)(1).toInt)
+    _id match {
+      case CODE_10 =>
+        println(x2_y2)
+        x2_y2
+      case CODE_11 =>
+        println(x1_y1)
+        x1_y1
+      case ANSWER_20 => x2_y2
+      case  _ => x1_y1
+    }
   }
 
   def getSubMat(c1:(Int, Int), c2:(Int, Int), img: Mat): Mat = {
