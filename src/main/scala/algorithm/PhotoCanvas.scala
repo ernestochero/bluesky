@@ -57,6 +57,7 @@ class PhotoCanvas extends JComponent {
     val originalImg = this.image
     // this.image = findContoursOperation(dilatationOperation(thresholdOperation(grayScaleOperation(this.image))),originalImg)
     this.image = findAuroMarkers(grayScaleOperation(this.image),originalImg)
+    /*this.image = thresholdOperation(grayScaleOperation(this.image))*/
     repaint()
   }
 

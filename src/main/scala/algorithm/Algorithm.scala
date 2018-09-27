@@ -92,7 +92,6 @@ object Algorithm {
       val rect = Imgproc.boundingRect(c)
       val ar = rect.width / rect.height.toFloat
       if (rect.width >= 20 && rect.height >= 20 && ar >= 0.9 && ar <= 1.1 ) {
-        println(s"${rect.width} - ${rect.height} - ${ar}")
         questionCnts.add(c)
       }
     })
@@ -116,18 +115,37 @@ object Algorithm {
         } else 0.0.compareTo(0.0)
       }
     })*/
+    //  Imgproc.drawContours(matColor, group.asJava, -1, new Scalar(255 ,0 , 0), 3)
 
     println(s"number of circles of answers ${questionCnts.size()}")
-
-    Imgproc.drawContours(matColor, questionCnts, -1, new Scalar(0, 0, 255), 3)
-
+    sortedVertically.foreach( v => {
+      println(Imgproc.boundingRect(v).tl())
+    })
 
     if ( typeSection == ANSWER && questionCntsList.length  == 500) {
-      sortedVertically.foreach( v => {
-        println(Imgproc.boundingRect(v).tl())
+      // here process the answers
+      val x = sortedVertically.grouped(20).toArray
+      Imgproc.drawContours(matColor, x(17).asJava, -1, new Scalar(255 ,0 , 0), 3)
+      val maybeResult = sortedVertically.grouped(20).map(_.map(buble => {
+        val mask = Mat.zeros(matThreshold.size(),CvType.CV_8UC3)
+        Core.bitwise_and(matThreshold,matThreshold, mask)
+        Core.countNonZero(mask)
+      }))
+      maybeResult.foreach(c => {
+        println(c.mkString(" "))
       })
+    } else  if(typeSection == CODE && sortedVertically.length == 60){
+      val maybeResult = sortedVertically.grouped(6).map(_.map(buble => {
+        val mask = Mat.zeros(matThreshold.size(),CvType.CV_8UC3)
+        Core.bitwise_and(matThreshold,matThreshold, mask)
+        Core.countNonZero(mask)
+      }))
+      maybeResult.foreach(c => {
+        println(c.mkString(" "))
+      })
+    } else {
+      // // otherwise we need to add a failure
     }
-    // otherwise we need to add a failure
     matToBufferedImage(matColor)
   }
 
@@ -170,20 +188,14 @@ object Algorithm {
     val x1_y1 = (corner.get(0,0)(0).toInt,corner.get(0,0)(1).toInt)
     val x2_y2 = (corner.get(0,2)(0).toInt,corner.get(0,2)(1).toInt)
     _id match {
-      case CODE_10 =>
-        println(x2_y2)
-        x2_y2
-      case CODE_11 =>
-        println(x1_y1)
-        x1_y1
+      case CODE_10 => x2_y2
+      case CODE_11 => x1_y1
       case ANSWER_20 => x2_y2
       case  _ => x1_y1
     }
   }
 
   def getSubMat(c1:(Int, Int), c2:(Int, Int), img: Mat): Mat = {
-    println(c1)
-    println(c2)
     img.submat(c1._2,c2._2,c1._1,c2._1)
   }
 

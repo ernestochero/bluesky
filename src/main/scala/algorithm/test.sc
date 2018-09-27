@@ -1,3 +1,6 @@
+val arr =  Array(1,2,3,5,3,6,3,5)
+arr.grouped(3).map(_.mkString(" ")).toArray
+arr.groupBy(identity).mapValues(_.size  )
 /*val arr = "3 2 1 3".split(" ").map(_.trim.toInt)
 def birthdayCakeCandles(ar: Array[Int]): Int = {
   val map = ar.groupBy(identity).mapValues(_.length)
@@ -26,6 +29,7 @@ def isValid(s: String) = {
 }
 */
 
+/*
 val s = "12:05:45AM"
 def timeConversion(s: String): String = {
   val _PM = "PM"
@@ -49,4 +53,4 @@ def timeConversion(s: String): String = {
     }
   }
 }
-timeConversion(s)
+timeConversion(s)*/
