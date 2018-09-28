@@ -1,4 +1,5 @@
 val arr =  Array(1,2,3,5,3,6,3,5)
+arr.filter(_ == 3)
 arr.grouped(3).map(_.mkString(" ")).toArray
 arr.groupBy(identity).mapValues(_.size  )
 /*val arr = "3 2 1 3".split(" ").map(_.trim.toInt)

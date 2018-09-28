@@ -86,59 +86,60 @@ object Algorithm {
   def findContoursOperation(matThreshold: Mat, matColor: Mat, typeSection: String): BufferedImage = {
     val out = new Mat(matColor.rows(), matColor.cols(), CvType.CV_8UC3)
     val contours = ListBuffer( List[MatOfPoint](): _* ).asJava
-    val questionCnts = ListBuffer ( List[MatOfPoint](): _* ).asJava
     Imgproc.findContours(matThreshold, contours, out, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
-    contours.forEach(c => {
+
+    val questionCntsList  =  contours.asScala.filter(c => {
       val rect = Imgproc.boundingRect(c)
       val ar = rect.width / rect.height.toFloat
-      if (rect.width >= 20 && rect.height >= 20 && ar >= 0.9 && ar <= 1.1 ) {
-        questionCnts.add(c)
-      }
-    })
-    //sort by y coordinates using the topleft point of every contour's bounding box
-    val questionCntsList = questionCnts.asScala.toList
+      rect.width >= 20 && rect.height >= 20 && ar >= 0.9 && ar <= 1.1
+    }).toList
 
+
+    //sort by y coordinates using the topleft point of every contour's bounding box
     val sortedVertically = questionCntsList.sortWith((o1,o2) => {
       val rect1 = Imgproc.boundingRect(o1)
       val rect2 = Imgproc.boundingRect(o2)
       rect1.tl().y < rect2.tl().y
     })
 
-    //sort by x coordinates
-   /* Collections.sort(questionCnts,  new Comparator[MatOfPoint] {
-      override def compare(o1: MatOfPoint, o2: MatOfPoint): Int = {
+    def sortedHorizontally(group: List[MatOfPoint]): List[MatOfPoint] = {
+      group.sortWith((o1, o2) => {
         val rect1 = Imgproc.boundingRect(o1)
         val rect2 = Imgproc.boundingRect(o2)
-        val total = rect1.tl().y / rect2.tl().y
-        if (total >= 0.9 && total <= 1.4) {
-          rect1.tl().x.compareTo(rect2.tl().x)
-        } else 0.0.compareTo(0.0)
-      }
-    })*/
-    //  Imgproc.drawContours(matColor, group.asJava, -1, new Scalar(255 ,0 , 0), 3)
+        rect1.tl().x < rect2.tl().x
+      })
+    }
 
-    println(s"number of circles of answers ${questionCnts.size()}")
+    println(s"number of circles of answers ${questionCntsList.length}")
     sortedVertically.foreach( v => {
       println(Imgproc.boundingRect(v).tl())
     })
+    val mask02 = Mat.zeros(matThreshold.size(),CvType.CV_8UC1)
+    Imgproc.drawContours(mask02,List(sortedVertically(0)).asJava , -1, new Scalar(255 ,255 , 255), -1)
+    Core.bitwise_and(matThreshold,matThreshold, mask02, mask02)
+    val c = Core.countNonZero(mask02)
 
     if ( typeSection == ANSWER && questionCntsList.length  == 500) {
       // here process the answers
-      val x = sortedVertically.grouped(20).toArray
-      Imgproc.drawContours(matColor, x(17).asJava, -1, new Scalar(255 ,0 , 0), 3)
-      val maybeResult = sortedVertically.grouped(20).map(_.map(buble => {
-        val mask = Mat.zeros(matThreshold.size(),CvType.CV_8UC3)
-        Core.bitwise_and(matThreshold,matThreshold, mask)
-        Core.countNonZero(mask)
+      val maybeResult = sortedVertically.grouped(20).map(sortedHorizontally(_).map(buble => {
+        val mask = Mat.zeros(matThreshold.size(),CvType.CV_8UC1)
+        Imgproc.drawContours(mask,List(buble).asJava,-1, new Scalar(255 ,255 , 255), -1)
+        Core.bitwise_and(matThreshold, matThreshold, mask, mask)
+        val total = Core.countNonZero(mask)
+        if (total > 500) 1
+        else 0
       }))
       maybeResult.foreach(c => {
         println(c.mkString(" "))
       })
     } else  if(typeSection == CODE && sortedVertically.length == 60){
-      val maybeResult = sortedVertically.grouped(6).map(_.map(buble => {
-        val mask = Mat.zeros(matThreshold.size(),CvType.CV_8UC3)
-        Core.bitwise_and(matThreshold,matThreshold, mask)
-        Core.countNonZero(mask)
+      val maybeResult = sortedVertically.grouped(6).map(sortedHorizontally(_).map(buble => {
+        val mask = Mat.zeros(matThreshold.size(),CvType.CV_8UC1)
+        Imgproc.drawContours(mask,List(buble).asJava,-1, new Scalar(255 ,255 , 255), -1)
+        Core.bitwise_and(matThreshold,matThreshold, mask, mask)
+        val total = Core.countNonZero(mask)
+        if (total > 500) 1
+        else 0
       }))
       maybeResult.foreach(c => {
         println(c.mkString(" "))
@@ -146,7 +147,7 @@ object Algorithm {
     } else {
       // // otherwise we need to add a failure
     }
-    matToBufferedImage(matColor)
+    matToBufferedImage(mask02)
   }
 
 
@@ -170,7 +171,7 @@ object Algorithm {
     val codeMatColor = getSubMat(pointsWithCenter(CODE_10), pointsWithCenter(CODE_11), colorMat)
     val answerMat = getSubMat(pointsWithCenter(ANSWER_20), pointsWithCenter(ANSWER_21), grayMat)
     val answerMatColor = getSubMat(pointsWithCenter(ANSWER_20), pointsWithCenter(ANSWER_21), colorMat)
-    findContoursOperation(bufferedImageToMat(dilatationOperation(thresholdOperation(matToBufferedImage(answerMat)))),answerMatColor, ANSWER)
+    findContoursOperation(bufferedImageToMat(dilatationOperation(thresholdOperation(matToBufferedImage(codeMat)))),codeMatColor, CODE)
     //dilatationOperation(thresholdOperation(matToBufferedImage(answerMat)))
   }
 

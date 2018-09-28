@@ -9,7 +9,7 @@ import javax.swing.JComponent
 
 class PhotoCanvas extends JComponent {
   var imagePath: Option[String] = None
-  val stream = this.getClass.getResourceAsStream("/exams/examF.png")
+  val stream = this.getClass.getResourceAsStream("/exams/examFM.png")
 
   var image = loadScalaImage(stream)
 
