@@ -83,8 +83,8 @@ object Algorithm {
     matToBufferedImage(img)
   }
 
-  def findContoursOperation(matThreshold: Mat, matColor: Mat, typeSection: String): BufferedImage = {
-    val out = new Mat(matColor.rows(), matColor.cols(), CvType.CV_8UC3)
+  def findContoursOperation(matThreshold: Mat, typeSection: String): List[List[Int]] = {
+    val out = new Mat(matThreshold.rows(), matThreshold.cols(), CvType.CV_8UC3)
     val contours = ListBuffer( List[MatOfPoint](): _* ).asJava
     Imgproc.findContours(matThreshold, contours, out, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
 
@@ -110,51 +110,31 @@ object Algorithm {
       })
     }
 
-    println(s"number of circles of answers ${questionCntsList.length}")
-    sortedVertically.foreach( v => {
-      println(Imgproc.boundingRect(v).tl())
-    })
-    val mask02 = Mat.zeros(matThreshold.size(),CvType.CV_8UC1)
-    Imgproc.drawContours(mask02,List(sortedVertically(0)).asJava , -1, new Scalar(255 ,255 , 255), -1)
-    Core.bitwise_and(matThreshold,matThreshold, mask02, mask02)
-    val c = Core.countNonZero(mask02)
-
-    if ( typeSection == ANSWER && questionCntsList.length  == 500) {
-      // here process the answers
-      val maybeResult = sortedVertically.grouped(20).map(sortedHorizontally(_).map(buble => {
+    def process(groupLength: Int): List[List[Int]] = {
+      sortedVertically.grouped(groupLength).map(sortedHorizontally(_).map(buble => {
         val mask = Mat.zeros(matThreshold.size(),CvType.CV_8UC1)
         Imgproc.drawContours(mask,List(buble).asJava,-1, new Scalar(255 ,255 , 255), -1)
         Core.bitwise_and(matThreshold, matThreshold, mask, mask)
         val total = Core.countNonZero(mask)
         if (total > 500) 1
         else 0
-      }))
-      maybeResult.foreach(c => {
-        println(c.mkString(" "))
-      })
+      })).toList
+    }
+
+    println(s"number of circles of answers ${questionCntsList.length}")
+    if ( typeSection == ANSWER && questionCntsList.length  == 500) {
+      process(20)
     } else  if(typeSection == CODE && sortedVertically.length == 60){
-      val maybeResult = sortedVertically.grouped(6).map(sortedHorizontally(_).map(buble => {
-        val mask = Mat.zeros(matThreshold.size(),CvType.CV_8UC1)
-        Imgproc.drawContours(mask,List(buble).asJava,-1, new Scalar(255 ,255 , 255), -1)
-        Core.bitwise_and(matThreshold,matThreshold, mask, mask)
-        val total = Core.countNonZero(mask)
-        if (total > 500) 1
-        else 0
-      }))
-      maybeResult.foreach(c => {
-        println(c.mkString(" "))
-      })
+      process(6)
     } else {
       // // otherwise we need to add a failure
+      List[List[Int]]()
     }
-    matToBufferedImage(mask02)
   }
 
 
-  def findAuroMarkers(grayImg: BufferedImage, colorImg: BufferedImage): BufferedImage = {
-    println(s"${grayImg.getWidth()} - ${grayImg.getHeight}")
+  def findAuroMarkers(grayImg: BufferedImage, colorImg: BufferedImage): (List[List[Int]],List[List[Int]]) = {
     val grayMat =  bufferedImageToMat(grayImg)
-    println(s"${grayMat.rows()} - ${grayMat.cols()}")
     val colorMat = bufferedImageToMat(colorImg)
     val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_ARUCO_ORIGINAL)
     val corners = ListBuffer( List[Mat](): _* ).asJava
@@ -165,14 +145,12 @@ object Algorithm {
     } else {
       // we need to add exception or failure
     }
-
     val pointsWithCenter =  getCornersTuple(ids, corners.asScala.toList ).flatten{ v => Map(v._1.toInt -> getCenterSquare(v._1.toInt,v._2)) }.toMap
     val codeMat = getSubMat(pointsWithCenter(CODE_10), pointsWithCenter(CODE_11), grayMat)
-    val codeMatColor = getSubMat(pointsWithCenter(CODE_10), pointsWithCenter(CODE_11), colorMat)
     val answerMat = getSubMat(pointsWithCenter(ANSWER_20), pointsWithCenter(ANSWER_21), grayMat)
-    val answerMatColor = getSubMat(pointsWithCenter(ANSWER_20), pointsWithCenter(ANSWER_21), colorMat)
-    findContoursOperation(bufferedImageToMat(dilatationOperation(thresholdOperation(matToBufferedImage(codeMat)))),codeMatColor, CODE)
-    //dilatationOperation(thresholdOperation(matToBufferedImage(answerMat)))
+    val codeResult = findContoursOperation(bufferedImageToMat(dilatationOperation(thresholdOperation(matToBufferedImage(codeMat)))), CODE)
+    val answerResult = findContoursOperation(bufferedImageToMat(dilatationOperation(thresholdOperation(matToBufferedImage(answerMat)))), ANSWER)
+    (codeResult, answerResult)
   }
 
   def getCornersTuple(ids:Mat, corners: List[Mat]): List[(Double,Mat)] = {

@@ -55,10 +55,10 @@ class PhotoCanvas extends JComponent {
 
   def applyGrayScaleOperation(): Unit = {
     val originalImg = this.image
-    // this.image = findContoursOperation(dilatationOperation(thresholdOperation(grayScaleOperation(this.image))),originalImg)
-    this.image = findAuroMarkers(grayScaleOperation(this.image),originalImg)
-    /*this.image = thresholdOperation(grayScaleOperation(this.image))*/
-    repaint()
+    val (a,b) = findAuroMarkers(grayScaleOperation(this.image),originalImg)
+    a.foreach(c => println(c.mkString(" ")))
+    println(" ")
+    b.foreach(c => println(c.mkString(" ")))
   }
 
   override def paintComponent(graphics: Graphics): Unit = {
