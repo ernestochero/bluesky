@@ -2,14 +2,14 @@ package algorithm
 import java.awt.Graphics
 import java.awt.image.BufferedImage
 import java.io.{FileInputStream, InputStream}
-import Algorithm.{grayScaleOperation, thresholdOperation, findContoursOperation, dilatationOperation, findAuroMarkers}
+import Algorithm._
 
 import javax.imageio.ImageIO
 import javax.swing.JComponent
 
 class PhotoCanvas extends JComponent {
   var imagePath: Option[String] = None
-  val stream = this.getClass.getResourceAsStream("/exams/examFM.png")
+  val stream = this.getClass.getResourceAsStream("/exams/examScannedWrong-2.png")
 
   var image = loadScalaImage(stream)
 
@@ -52,16 +52,28 @@ class PhotoCanvas extends JComponent {
     reload()
   }
 
+  def applyRotateOperation(): Unit = {
+    val img = this.image
+    Algorithm.rotationWrap(Algorithm.bufferedImageToMat(img)) match {
+      case Right(result) =>
+        this.image = Algorithm.matToBufferedImage(result)
+        repaint()
+      case Left(error) => error
+    }
+  }
 
   def applyGrayScaleOperation(): Unit = {
-    val originalImg = this.image
-    val result = Algorithm.rotationWrap(Algorithm.bufferedImageToMat(originalImg))
-    this.image = Algorithm.matToBufferedImage(result)
-    repaint()
-    /*val (a,b) = findAuroMarkers(grayScaleOperation(this.image),originalImg)
-    a.foreach(c => println(c.mkString(" ")))
-    println(" ")
-    b.foreach(c => println(c.mkString(" ")))*/
+    val img = Algorithm.bufferedImageToMat(this.image)
+    println("heyyy")
+    Algorithm.calificateTemplate(img, img) match {
+      case Right(result) =>
+        val (a,b) = result
+        a.foreach(c => println(c.mkString(" ")))
+        println("heyyy")
+        b.foreach(c => println(c.mkString(" ")))
+      case Left(x) => println(x.error)
+    }
+
   }
 
   override def paintComponent(graphics: Graphics): Unit = {

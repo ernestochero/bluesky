@@ -56,16 +56,21 @@ object ViewMain {
     controls.setLayout(new GridLayout(0, 2))
     operationsPanel.add(controls, BorderLayout.NORTH)
 
-    val execute = new JLabel("execute")
-    controls.add(execute)
+    val rotateOpButton = new JButton("apply rotate")
+    rotateOpButton.addActionListener(new ActionListener {
+      override def actionPerformed(actionEvent: ActionEvent): Unit = canvas.applyRotateOperation()
+    })
+    controls.add(rotateOpButton)
 
-    val executeOpButton = new JButton("execute")
-    executeOpButton.addActionListener(new ActionListener {
+    val qualifyOpButton = new JButton("apply qualify")
+    qualifyOpButton.addActionListener(new ActionListener {
       override def actionPerformed(e: ActionEvent): Unit = {
         canvas.applyGrayScaleOperation()
       }
     })
-    controls.add(executeOpButton)
+    controls.add(qualifyOpButton)
+
+
 
     val canvas = new PhotoCanvas
     val scrollPane = new JScrollPane(canvas)

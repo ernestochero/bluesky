@@ -24,6 +24,12 @@ object Algorithm {
   val CODE = "code"
   val ANSWER = "answer"
 
+  val numberContoursOfCodes = 60
+  val numberContoursOfAnswers = 500
+
+  val HORIZONTALLY = 1
+  val VERTICALLY = 2
+
   def bufferedImageToMat(bufferedImage: BufferedImage): Mat = {
     val width = bufferedImage.getWidth()
     val height = bufferedImage.getHeight()
@@ -100,8 +106,25 @@ object Algorithm {
     out
   }
 
-  def rotationWrap(mat: Mat) = {
-    val out = mat.clone()
+  def sortPoints(points:MatOfPoint2f,refer:Point): MatOfPoint2f = {
+    def distance(p1:Point, p2:Point): Double = {
+      val d1 = math.pow(p1.x - p2.x,2)
+      val d2 = math.pow(p1.y - p2.y,2)
+      math.sqrt(d1 + d2)
+    }
+    val arr = points.toArray.map((point) => {
+      (distance(refer,point),point)
+    }).sortWith(_._1 < _._1)
+
+    val x1_y1 = arr.head._2
+    val x3_y3 = arr.last._2
+    val subArr = Array(arr(1),arr(2)).sortWith(_._2.x < _._2.x)
+    val x4_y4 = subArr.head._2
+    val x2_x2 = subArr.last._2
+    new MatOfPoint2f(x1_y1, x2_x2, x3_y3, x4_y4)
+  }
+
+  def rotationWrap(mat: Mat): Either[TransformError, Mat] = {
     val gray = grayScaleOperation(mat)
     val blurred = gaussianBlurOperation(gray)
     val edged = cannyOperation(blurred)
@@ -128,57 +151,47 @@ object Algorithm {
       }
     }
 
+    doCnt match {
+      case Some(cnt) =>
+        val destImage = mat.clone()
+        val cnt = doCnt.get
+        val cntOrdered = sortPoints(cnt, new Point(0,0))
+        val dst_mat = new MatOfPoint2f(new Point(0,0), new Point(destImage.width() - 1, 0), new Point(destImage.width() - 1, destImage.height() - 1), new Point(0, destImage.height() - 1))
+        val transform = Imgproc.getPerspectiveTransform(cntOrdered, dst_mat)
+        Imgproc.warpPerspective(mat, destImage, transform, destImage.size())
+        Right(destImage)
 
-    if (doCnt.isDefined) {
-      val destImage = mat.clone()
-      val cnt = doCnt.get
-      cnt.toList.asScala.foreach(println(_))
-      val rect = Imgproc.minAreaRect(cnt).boundingRect()
-      val x1_y1 = rect.tl()
-      val x2_y2 = new Point(rect.br().x, rect.tl().y)
-      val x3_y3 = rect.br()
-      val x4_y4 = new core.Point(rect.tl().x, rect.br().y)
-      val src_mat = new MatOfPoint2f(x1_y1, x2_y2, x3_y3, x4_y4)
-      //val dst_mat = new MatOfPoint2f(new Point(0,0), new Point(destImage.width() - 1, 0), new Point(destImage.width() - 1, destImage.height() - 1), new Point(0, destImage.height() - 1))
-      val dst_mat = new MatOfPoint2f(new Point(destImage.width() - 1, 0), new Point(0,0), new Point(0, destImage.height() - 1), new Point(destImage.width() - 1, destImage.height() - 1))
-      val transform = Imgproc.getPerspectiveTransform(cnt, dst_mat)
-      Imgproc.warpPerspective(mat, destImage, transform, out.size())
-      destImage
-    } else {
-      mat
+      case _ =>
+        Left(TransformError("Impossible to get contour to apply wrapPerspective"))
     }
 
   }
 
-  def findContoursOperation(matThreshold: Mat, typeSection: String): List[List[Int]] = {
+  def sortedGroups(group: List[MatOfPoint], t: Int): List[MatOfPoint] = {
+    group.sortWith((o1, o2) => {
+      val rect1 = Imgproc.boundingRect(o1)
+      val rect2 = Imgproc.boundingRect(o2)
+      t match {
+        case HORIZONTALLY => rect1.tl().x < rect2.tl().x
+        case _ => rect1.tl().y < rect2.tl().y
+      }
+    })
+  }
+
+  def findContoursOperation(matThreshold: Mat, typeSection: String): Either[TransformError,List[List[Int]]] = {
     val out = new Mat(matThreshold.rows(), matThreshold.cols(), CvType.CV_8UC3)
     val contours = ListBuffer(List[MatOfPoint](): _*).asJava
     Imgproc.findContours(matThreshold, contours, out, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
-
-    val questionCntsList = contours.asScala.filter(c => {
+    println(s"TYPE : ${typeSection}")
+    val ContoursList = contours.asScala.filter(c => {
       val rect = Imgproc.boundingRect(c)
       val ar = rect.width / rect.height.toFloat
-      rect.width >= 20 && rect.height >= 20 && ar >= 0.9 && ar <= 1.1
+/*      println(rect.width + " " + rect.height + " " + ar)*/
+      rect.width >= 19 && rect.height >= 19 && ar >= 0.9 && ar <= 1.4
     }).toList
 
-
-    //sort by y coordinates using the topleft point of every contour's bounding box
-    val sortedVertically = questionCntsList.sortWith((o1, o2) => {
-      val rect1 = Imgproc.boundingRect(o1)
-      val rect2 = Imgproc.boundingRect(o2)
-      rect1.tl().y < rect2.tl().y
-    })
-
-    def sortedHorizontally(group: List[MatOfPoint]): List[MatOfPoint] = {
-      group.sortWith((o1, o2) => {
-        val rect1 = Imgproc.boundingRect(o1)
-        val rect2 = Imgproc.boundingRect(o2)
-        rect1.tl().x < rect2.tl().x
-      })
-    }
-
     def process(groupLength: Int): List[List[Int]] = {
-      sortedVertically.grouped(groupLength).map(sortedHorizontally(_).map(buble => {
+      sortedGroups(ContoursList, VERTICALLY).grouped(groupLength).map(sortedGroups(_,HORIZONTALLY).map(buble => {
         val mask = Mat.zeros(matThreshold.size(), CvType.CV_8UC1)
         Imgproc.drawContours(mask, List(buble).asJava, -1, new Scalar(255, 255, 255), -1)
         Core.bitwise_and(matThreshold, matThreshold, mask, mask)
@@ -188,36 +201,32 @@ object Algorithm {
       })).toList
     }
 
-    println(s"number of circles of answers ${questionCntsList.length}")
-    if (typeSection == ANSWER && questionCntsList.length == 500) {
-      process(20)
-    } else if (typeSection == CODE && sortedVertically.length == 60) {
-      process(6)
-    } else {
-      // // otherwise we need to add a failure
-      List[List[Int]]()
+    println(s"number of circles of answers ${ContoursList.length}")
+    val quantity = if(typeSection == ANSWER) numberContoursOfAnswers else numberContoursOfCodes
+    val groupDivide = if(typeSection == ANSWER) 20 else 6
+    (typeSection, ContoursList, quantity, groupDivide) match {
+      case (t,c,q,g) if c.length == q =>
+        Right(process(g))
+      case _ =>
+        Left(TransformError(s"Error : number of contours below limit ${ContoursList.length} < $quantity"))
     }
   }
 
 
-  def findAuroMarkers(grayImg: BufferedImage, colorImg: BufferedImage): (List[List[Int]], List[List[Int]]) = {
-    val grayMat = bufferedImageToMat(grayImg)
-    val colorMat = bufferedImageToMat(colorImg)
+  def calificateTemplate(grayMat: Mat, colorMat: Mat): Either[TransformError,(List[List[Int]], List[List[Int]])] = {
     val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_ARUCO_ORIGINAL)
     val corners = ListBuffer(List[Mat](): _*).asJava
     val ids = new Mat()
     Aruco.detectMarkers(grayMat, dictionary, corners, ids)
-    if (corners.size() > 1) {
-      // Aruco.drawDetectedMarkers(colorMat,corners,ids,new Scalar(0, 0, 255))
-    } else {
-      // we need to add exception or failure
+    if(!corners.isEmpty && corners.size() == 4) {
+      val pointsWithCenter = getCornersTuple(ids, corners.asScala.toList).flatten { v => Map(v._1.toInt -> getCenterSquare(v._1.toInt, v._2)) }.toMap
+      val codeMat = getSubMat(pointsWithCenter(CODE_10), pointsWithCenter(CODE_11), grayMat)
+      val answerMat = getSubMat(pointsWithCenter(ANSWER_20), pointsWithCenter(ANSWER_21), grayMat)
+      val Right(codeResult) = findContoursOperation(dilatationOperation(thresholdOperation(codeMat)), CODE)
+      val Right(answerResult) = findContoursOperation(dilatationOperation(thresholdOperation(answerMat)), ANSWER)
+      Right((codeResult, answerResult))
     }
-    val pointsWithCenter = getCornersTuple(ids, corners.asScala.toList).flatten { v => Map(v._1.toInt -> getCenterSquare(v._1.toInt, v._2)) }.toMap
-    val codeMat = getSubMat(pointsWithCenter(CODE_10), pointsWithCenter(CODE_11), grayMat)
-    val answerMat = getSubMat(pointsWithCenter(ANSWER_20), pointsWithCenter(ANSWER_21), grayMat)
-    val codeResult = findContoursOperation(dilatationOperation(thresholdOperation(codeMat)), CODE)
-    val answerResult = findContoursOperation(dilatationOperation(thresholdOperation(answerMat)), ANSWER)
-    (codeResult, answerResult)
+    else Left(TransformError("Corners are Empty, don't find the Exact Aruco Markers"))
   }
 
   def getCornersTuple(ids: Mat, corners: List[Mat]): List[(Double, Mat)] = {

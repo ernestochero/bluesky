@@ -1,3 +1,33 @@
+val arr = Array.empty[Int]
+arr.sortWith( _ < _ )
+
+/*
+val points = Array((1319.0, 164.0), (238.0, 166.0), (196.0, 1222.0), (1393.0, 1200.0))
+
+
+def sorted(points:Array[(Double, Double)],refer:(Double, Double)): Array[(Double,Double)] = {
+  def distance(p1:(Double, Double), p2:(Double,Double)): Double = {
+    val d1 = math.pow(p1._1 - p2._1,2)
+    val d2 = math.pow(p1._2 - p2._2,2)
+    math.sqrt(d1 + d2)
+  }
+  val arr = points.map((point) => {
+    (distance(refer,point),point)
+  }).sortWith(_._1 < _._1)
+
+  val x1_y1 = arr.head._2
+  val x3_y3 = arr.last._2
+  val subArr = Array(arr(1),arr(2)).sortWith(_._2._1 < _._2._1)
+  val x4_y4 = subArr.head._2
+  val x2_x2 = subArr.last._2
+  Array(x1_y1,x2_x2,x3_y3,x4_y4)
+}
+
+sorted(points,(0.0,0.0))
+*/
+
+
+
 /*import scala.util.control.Breaks.{breakable, break}
 breakable {
   for (i <- 1 to 9) {
@@ -5,8 +35,6 @@ breakable {
     if (i > 4) break  // break out of the for loop
   }
 }*/
-
-val s = Array.empty[Int]
 
 /*def memoizedIsPrime: Int => Boolean = {
   def isPrime(num: Int): Boolean = {
