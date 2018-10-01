@@ -1,7 +1,48 @@
-val arr =  Array(1,2,3,5,3,6,3,5)
+/*import scala.util.control.Breaks.{breakable, break}
+breakable {
+  for (i <- 1 to 9) {
+    println(i)
+    if (i > 4) break  // break out of the for loop
+  }
+}*/
+
+val s = Array.empty[Int]
+
+/*def memoizedIsPrime: Int => Boolean = {
+  def isPrime(num: Int): Boolean = {
+    2 to (num-1) forall(x => num % x != 0)
+  }
+
+  val cache = collection.mutable.Map.empty[Int, Boolean]
+
+  num => cache.getOrElse(num, {
+    print(s"\n Calling isPrime since input ${num} hasn't seen before and caching the output")
+    cache.update(num, isPrime(num))
+    cache(num)
+  })
+}
+
+val isPrime = memoizedIsPrime
+isPrime(10)
+isPrime(7)
+isPrime(10)*/
+/*def foobat(x: Int)(y: Int) = x + y
+val f1 = foobat(10)_
+f1(20)
+
+case class Person(name: String, age: Int)
+val o1 = Some(40)
+val o2 = Some("Ernesto")
+val o3 = None
+for {
+  n <- o3
+  a <- o1
+} yield Person(n,a)*/
+
+/*val arr =  Array(1,2,3,5,3,6,3,5)
 arr.filter(_ == 3)
 arr.grouped(3).map(_.mkString(" ")).toArray
-arr.groupBy(identity).mapValues(_.size  )
+arr.groupBy(identity).mapValues(_.size  )*/
 /*val arr = "3 2 1 3".split(" ").map(_.trim.toInt)
 def birthdayCakeCandles(ar: Array[Int]): Int = {
   val map = ar.groupBy(identity).mapValues(_.length)
