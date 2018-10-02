@@ -16,8 +16,8 @@ case class Result(success: Int, failures: Int)
 
 object Algorithm {
 
-  val CODE_10 = 10
-  val CODE_11 = 11
+  val CODE_4 = 4
+  val CODE_1 = 1
   val ANSWER_20 = 20
   val ANSWER_21 = 21
 
@@ -29,6 +29,8 @@ object Algorithm {
 
   val HORIZONTALLY = 1
   val VERTICALLY = 2
+
+  var MASK = new Mat()
 
   def bufferedImageToMat(bufferedImage: BufferedImage): Mat = {
     val width = bufferedImage.getWidth()
@@ -106,12 +108,13 @@ object Algorithm {
     out
   }
 
+  def distance(p1:Point, p2:Point): Double = {
+    val d1 = math.pow(p1.x - p2.x,2)
+    val d2 = math.pow(p1.y - p2.y,2)
+    math.sqrt(d1 + d2)
+  }
+
   def sortPoints(points:MatOfPoint2f,refer:Point): MatOfPoint2f = {
-    def distance(p1:Point, p2:Point): Double = {
-      val d1 = math.pow(p1.x - p2.x,2)
-      val d2 = math.pow(p1.y - p2.y,2)
-      math.sqrt(d1 + d2)
-    }
     val arr = points.toArray.map((point) => {
       (distance(refer,point),point)
     }).sortWith(_._1 < _._1)
@@ -122,6 +125,13 @@ object Algorithm {
     val x4_y4 = subArr.head._2
     val x2_x2 = subArr.last._2
     new MatOfPoint2f(x1_y1, x2_x2, x3_y3, x4_y4)
+  }
+
+  def getSizeOfQuad(points:MatOfPoint2f):(Double, Double) = {
+    val arr = points.toArray
+    val width = distance(arr(0), arr(1))
+    val height = distance(arr(0), arr(3))
+    (width, height)
   }
 
   def rotationWrap(mat: Mat): Either[TransformError, Mat] = {
@@ -153,9 +163,10 @@ object Algorithm {
 
     doCnt match {
       case Some(cnt) =>
-        val destImage = mat.clone()
         val cnt = doCnt.get
         val cntOrdered = sortPoints(cnt, new Point(0,0))
+        val measures = getSizeOfQuad(cntOrdered)
+        val destImage = new Mat(measures._2.toInt, measures._1.toInt, mat.`type`())
         val dst_mat = new MatOfPoint2f(new Point(0,0), new Point(destImage.width() - 1, 0), new Point(destImage.width() - 1, destImage.height() - 1), new Point(0, destImage.height() - 1))
         val transform = Imgproc.getPerspectiveTransform(cntOrdered, dst_mat)
         Imgproc.warpPerspective(mat, destImage, transform, destImage.size())
@@ -186,8 +197,8 @@ object Algorithm {
     val ContoursList = contours.asScala.filter(c => {
       val rect = Imgproc.boundingRect(c)
       val ar = rect.width / rect.height.toFloat
-/*      println(rect.width + " " + rect.height + " " + ar)*/
-      rect.width >= 19 && rect.height >= 19 && ar >= 0.9 && ar <= 1.4
+      println(rect.width + " " + rect.height + " " + ar)
+      rect.width >= 20 && rect.height >= 20 && ar >= 0.9 && ar <= 1.2
     }).toList
 
     def process(groupLength: Int): List[List[Int]] = {
@@ -196,6 +207,7 @@ object Algorithm {
         Imgproc.drawContours(mask, List(buble).asJava, -1, new Scalar(255, 255, 255), -1)
         Core.bitwise_and(matThreshold, matThreshold, mask, mask)
         val total = Core.countNonZero(mask)
+        this.MASK = mask
         if (total > 500) 1
         else 0
       })).toList
@@ -212,15 +224,24 @@ object Algorithm {
     }
   }
 
-
-  def calificateTemplate(grayMat: Mat, colorMat: Mat): Either[TransformError,(List[List[Int]], List[List[Int]])] = {
+  def drawArucoMarkers(grayMat: Mat): Mat = {
     val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_ARUCO_ORIGINAL)
     val corners = ListBuffer(List[Mat](): _*).asJava
     val ids = new Mat()
     Aruco.detectMarkers(grayMat, dictionary, corners, ids)
+    Aruco.drawDetectedMarkers(grayMat,corners,ids,new Scalar(0, 0, 255))
+    grayMat
+  }
+
+  def calificateTemplate(grayMat: Mat): Either[TransformError,(List[List[Int]], List[List[Int]])] = {
+    val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_ARUCO_ORIGINAL)
+    val corners = ListBuffer(List[Mat](): _*).asJava
+    val ids = new Mat()
+    Aruco.detectMarkers(grayMat, dictionary, corners, ids)
+    println(corners.size())
     if(!corners.isEmpty && corners.size() == 4) {
       val pointsWithCenter = getCornersTuple(ids, corners.asScala.toList).flatten { v => Map(v._1.toInt -> getCenterSquare(v._1.toInt, v._2)) }.toMap
-      val codeMat = getSubMat(pointsWithCenter(CODE_10), pointsWithCenter(CODE_11), grayMat)
+      val codeMat = getSubMat(pointsWithCenter(CODE_1),pointsWithCenter(CODE_4), grayMat)
       val answerMat = getSubMat(pointsWithCenter(ANSWER_20), pointsWithCenter(ANSWER_21), grayMat)
       val Right(codeResult) = findContoursOperation(dilatationOperation(thresholdOperation(codeMat)), CODE)
       val Right(answerResult) = findContoursOperation(dilatationOperation(thresholdOperation(answerMat)), ANSWER)
@@ -243,8 +264,8 @@ object Algorithm {
     val x1_y1 = (corner.get(0, 0)(0).toInt, corner.get(0, 0)(1).toInt)
     val x2_y2 = (corner.get(0, 2)(0).toInt, corner.get(0, 2)(1).toInt)
     _id match {
-      case CODE_10 => x2_y2
-      case CODE_11 => x1_y1
+      case CODE_1 => x2_y2
+      case CODE_4 => x1_y1
       case ANSWER_20 => x2_y2
       case _ => x1_y1
     }

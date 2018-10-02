@@ -9,7 +9,7 @@ import javax.swing.JComponent
 
 class PhotoCanvas extends JComponent {
   var imagePath: Option[String] = None
-  val stream = this.getClass.getResourceAsStream("/exams/examScannedWrong-2.png")
+  val stream = this.getClass.getResourceAsStream("/exams/examenScanned.png")
 
   var image = loadScalaImage(stream)
 
@@ -63,17 +63,17 @@ class PhotoCanvas extends JComponent {
   }
 
   def applyGrayScaleOperation(): Unit = {
+    /*val m = Algorithm.matToBufferedImage(Algorithm.drawArucoMarkers(Algorithm.bufferedImageToMat(this.image)))
+    this.image = m
+    repaint()*/
     val img = Algorithm.bufferedImageToMat(this.image)
-    println("heyyy")
-    Algorithm.calificateTemplate(img, img) match {
+    Algorithm.calificateTemplate(img) match {
       case Right(result) =>
         val (a,b) = result
         a.foreach(c => println(c.mkString(" ")))
-        println("heyyy")
         b.foreach(c => println(c.mkString(" ")))
       case Left(x) => println(x.error)
     }
-
   }
 
   override def paintComponent(graphics: Graphics): Unit = {
