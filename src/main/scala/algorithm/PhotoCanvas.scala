@@ -58,7 +58,7 @@ class PhotoCanvas extends JComponent {
       case Right(result) =>
         this.image = Algorithm.matToBufferedImage(result)
         repaint()
-      case Left(error) => error
+      case Left(failure) => println(failure.error)
     }
   }
 
@@ -69,10 +69,10 @@ class PhotoCanvas extends JComponent {
     val img = Algorithm.bufferedImageToMat(this.image)
     Algorithm.calificateTemplate(img) match {
       case Right(result) =>
-        val (a,b) = result
-        a.foreach(c => println(c.mkString(" ")))
-        b.foreach(c => println(c.mkString(" ")))
-      case Left(x) => println(x.error)
+        val (code,answers) = result
+        println(code)
+        answers.zipWithIndex.foreach(println(_))
+      case Left(failure) => println(failure.error)
     }
   }
 

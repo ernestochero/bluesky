@@ -30,8 +30,6 @@ object Algorithm {
   val HORIZONTALLY = 1
   val VERTICALLY = 2
 
-  var MASK = new Mat()
-
   def bufferedImageToMat(bufferedImage: BufferedImage): Mat = {
     val width = bufferedImage.getWidth()
     val height = bufferedImage.getHeight()
@@ -197,7 +195,7 @@ object Algorithm {
     val ContoursList = contours.asScala.filter(c => {
       val rect = Imgproc.boundingRect(c)
       val ar = rect.width / rect.height.toFloat
-      println(rect.width + " " + rect.height + " " + ar)
+      /*println(rect.width + " " + rect.height + " " + ar)*/
       rect.width >= 20 && rect.height >= 20 && ar >= 0.9 && ar <= 1.2
     }).toList
 
@@ -207,7 +205,6 @@ object Algorithm {
         Imgproc.drawContours(mask, List(buble).asJava, -1, new Scalar(255, 255, 255), -1)
         Core.bitwise_and(matThreshold, matThreshold, mask, mask)
         val total = Core.countNonZero(mask)
-        this.MASK = mask
         if (total > 500) 1
         else 0
       })).toList
@@ -233,7 +230,7 @@ object Algorithm {
     grayMat
   }
 
-  def calificateTemplate(grayMat: Mat): Either[TransformError,(List[List[Int]], List[List[Int]])] = {
+  def calificateTemplate(grayMat: Mat): Either[TransformError,(String, String)] = {
     val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_ARUCO_ORIGINAL)
     val corners = ListBuffer(List[Mat](): _*).asJava
     val ids = new Mat()
@@ -245,9 +242,38 @@ object Algorithm {
       val answerMat = getSubMat(pointsWithCenter(ANSWER_20), pointsWithCenter(ANSWER_21), grayMat)
       val Right(codeResult) = findContoursOperation(dilatationOperation(thresholdOperation(codeMat)), CODE)
       val Right(answerResult) = findContoursOperation(dilatationOperation(thresholdOperation(answerMat)), ANSWER)
-      Right((codeResult, answerResult))
+      Right((getCodeofMatrix(codeResult), getAnswersofMatrix(answerResult)))
     }
     else Left(TransformError("Corners are Empty, don't find the Exact Aruco Markers"))
+  }
+
+
+  def getCodeofMatrix(matrix: List[List[Int]]):String = {
+    val code = Array.fill(6)('_')
+    matrix.foldLeft((code,0)){(co,arr) =>
+      val indexs = arr.zipWithIndex.filter(_._1 == 1).map(_._2)
+      indexs.foreach(c => co._1.update(c,co._2.toString.charAt(0)))
+      (co._1, co._2 + 1)
+    }._1.mkString("")
+  }
+
+  def getAnswersofMatrix(matrix: List[List[Int]]) = {
+    val answers = Array.fill(100)('_')
+    matrix.foldLeft((answers,0)){(an,arr) =>
+      val env = Map(0 -> 'a', 1 ->'b',2 -> 'c', 3 ->'d',4 -> 'e')
+      val inds = arr.grouped(5).map(group => {
+        val countsOnes = group.count(_ == 1)
+        if( countsOnes == 1 ) {
+          env(group.indexOf(1))
+        } else 'x'
+      }).toArray
+
+      answers.update(an._2,inds(0))
+      answers.update(an._2 + 25,inds(1))
+      answers.update(an._2 + 50,inds(2))
+      answers.update(an._2 + 75,inds(3))
+      (an._1, an._2 + 1)
+    }._1.mkString("")
   }
 
   def getCornersTuple(ids: Mat, corners: List[Mat]): List[(Double, Mat)] = {

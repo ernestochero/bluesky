@@ -1,6 +1,33 @@
-val arr = Array.empty[Int]
-arr.sortWith( _ < _ )
+val arr = List(1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1)
+val env = Map(0 -> 'a', 1 ->'b',2 -> 'c', 3 ->'d',4 -> 'e')
+arr.grouped(5).map(group => {
+  val countsOnes = group.count(_ == 1)
+  if( countsOnes == 1 ) {
+    env(group.indexOf(1))
+  } else 'x'
+}).toList
 
+/*val matrix = Array(
+  Array(0, 0, 0, 1, 0, 1),
+  Array(0, 0, 0, 0, 0, 0),
+  Array(0, 0, 0, 0, 0, 0),
+  Array(0, 1, 0, 0, 0, 0),
+  Array(0, 0, 0, 0, 0, 0),
+  Array(0, 0, 1, 0, 0, 0),
+  Array(0, 0, 0, 0, 0, 0),
+  Array(1, 0, 0, 0, 0, 0),
+  Array(0, 0, 0, 0, 1, 0),
+  Array(0, 0, 0, 0, 0, 0)
+)
+def getCodeofMatrix(matrix: Array[Array[Int]]) = {
+  val code = Array.fill(6)('_')
+  matrix.foldLeft((code,0)){(co,arr) =>
+    val indexs = arr.zipWithIndex.filter(_._1 == 1).map(_._2)
+    indexs.foreach(c => co._1.update(c,co._2.toString.charAt(0)))
+    (co._1,co._2 + 1)
+  }._1.mkString("")
+}
+getCodeofMatrix(matrix)*/
 /*
 val points = Array((1319.0, 164.0), (238.0, 166.0), (196.0, 1222.0), (1393.0, 1200.0))
 
