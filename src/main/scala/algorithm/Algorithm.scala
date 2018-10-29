@@ -16,15 +16,15 @@ case class Result(success: Int, failures: Int)
 
 object Algorithm {
 
-  val CODE_4 = 4
-  val CODE_1 = 1
-  val ANSWER_20 = 20
-  val ANSWER_21 = 21
+  val CODE_1 = 12
+  val CODE_4 = 13
+  val ANSWER_20 = 42
+  val ANSWER_21 = 45
 
   val CODE = "code"
   val ANSWER = "answer"
 
-  val numberContoursOfCodes = 60
+  val numberContoursOfCodes = 70
   val numberContoursOfAnswers = 500
 
   val HORIZONTALLY = 1
@@ -212,7 +212,7 @@ object Algorithm {
 
     println(s"number of circles of answers ${ContoursList.length}")
     val quantity = if(typeSection == ANSWER) numberContoursOfAnswers else numberContoursOfCodes
-    val groupDivide = if(typeSection == ANSWER) 20 else 6
+    val groupDivide = if(typeSection == ANSWER) 20 else 7
     (typeSection, ContoursList, quantity, groupDivide) match {
       case (t,c,q,g) if c.length == q =>
         Right(process(g))
@@ -222,7 +222,7 @@ object Algorithm {
   }
 
   def drawArucoMarkers(grayMat: Mat): Mat = {
-    val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_ARUCO_ORIGINAL)
+    val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_4X4_50)
     val corners = ListBuffer(List[Mat](): _*).asJava
     val ids = new Mat()
     Aruco.detectMarkers(grayMat, dictionary, corners, ids)
@@ -231,7 +231,7 @@ object Algorithm {
   }
 
   def calificateTemplate(grayMat: Mat): Either[TransformError,(String, String)] = {
-    val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_ARUCO_ORIGINAL)
+    val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_4X4_50)
     val corners = ListBuffer(List[Mat](): _*).asJava
     val ids = new Mat()
     Aruco.detectMarkers(grayMat, dictionary, corners, ids)
@@ -249,7 +249,7 @@ object Algorithm {
 
 
   def getCodeofMatrix(matrix: List[List[Int]]):String = {
-    val code = Array.fill(6)('_')
+    val code = Array.fill(7)('_')
     matrix.foldLeft((code,0)){(co,arr) =>
       val indexs = arr.zipWithIndex.filter(_._1 == 1).map(_._2)
       indexs.foreach(c => co._1.update(c,co._2.toString.charAt(0)))
