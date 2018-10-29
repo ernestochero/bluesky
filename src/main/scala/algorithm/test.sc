@@ -1,11 +1,28 @@
-val arr = List(1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1)
+val list = Nil
+list.headOption
+
+/*
+val x = Array(("ernesto","Chero",true),
+  ("Gaston","Tavara", false),
+  ("Roger", "CAst", true),
+  ("Jose","Cardena", false))
+
+
+val (m,n) = x.foldLeft((Array.empty[String],Array.empty[String])){(a,b) =>
+  if(b._3 == true) (a._1 :+ b._2,a._2)
+  else (a._1,a._2 :+ b._2)
+}
+*/
+
+
+/*val arr = List(1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1)
 val env = Map(0 -> 'a', 1 ->'b',2 -> 'c', 3 ->'d',4 -> 'e')
 arr.grouped(5).map(group => {
   val countsOnes = group.count(_ == 1)
   if( countsOnes == 1 ) {
     env(group.indexOf(1))
   } else 'x'
-}).toList
+}).toList*/
 
 /*val matrix = Array(
   Array(0, 0, 0, 1, 0, 1),

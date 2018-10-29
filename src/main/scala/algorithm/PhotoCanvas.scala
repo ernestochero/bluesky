@@ -63,7 +63,8 @@ class PhotoCanvas extends JComponent {
   }
 
   def applyGrayScaleOperation(): Unit = {
-   /* val m = Algorithm.matToBufferedImage(Algorithm.drawArucoMarkers(Algorithm.bufferedImageToMat(this.image)))
+    /*val m = Algorithm.matToBufferedImage(Algorithm.findContoursOperation2(Algorithm.bufferedImageToMat(this.image)))
+    //val m = Algorithm.matToBufferedImage(Algorithm.drawArucoMarkers(Algorithm.bufferedImageToMat(this.image)))
     this.image = m
     repaint()*/
     val img = Algorithm.bufferedImageToMat(this.image)

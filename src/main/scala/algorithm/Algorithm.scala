@@ -16,10 +16,10 @@ case class Result(success: Int, failures: Int)
 
 object Algorithm {
 
-  val CODE_1 = 12
-  val CODE_4 = 13
-  val ANSWER_20 = 42
-  val ANSWER_21 = 45
+  val CODE_12 = 12
+  val CODE_13 = 13
+  val ANSWER_42 = 42
+  val ANSWER_45 = 45
 
   val CODE = "code"
   val ANSWER = "answer"
@@ -106,6 +106,18 @@ object Algorithm {
     out
   }
 
+  def openOperantion(mat: Mat): Mat = {
+    val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
+    Imgproc.morphologyEx(mat, out, Imgproc.MORPH_OPEN, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3)))
+    out
+  }
+
+  def closeOperantion(mat: Mat): Mat = {
+    val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
+    Imgproc.morphologyEx(mat, out, Imgproc.MORPH_CLOSE, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3)))
+    out
+  }
+
   def distance(p1:Point, p2:Point): Double = {
     val d1 = math.pow(p1.x - p2.x,2)
     val d2 = math.pow(p1.y - p2.y,2)
@@ -167,7 +179,7 @@ object Algorithm {
         val destImage = new Mat(measures._2.toInt, measures._1.toInt, mat.`type`())
         val dst_mat = new MatOfPoint2f(new Point(0,0), new Point(destImage.width() - 1, 0), new Point(destImage.width() - 1, destImage.height() - 1), new Point(0, destImage.height() - 1))
         val transform = Imgproc.getPerspectiveTransform(cntOrdered, dst_mat)
-        Imgproc.warpPerspective(mat, destImage, transform, destImage.size())
+        Imgproc.warpPerspective(gray, destImage, transform, destImage.size())
         Right(destImage)
 
       case _ =>
@@ -190,12 +202,13 @@ object Algorithm {
   def findContoursOperation(matThreshold: Mat, typeSection: String): Either[TransformError,List[List[Int]]] = {
     val out = new Mat(matThreshold.rows(), matThreshold.cols(), CvType.CV_8UC3)
     val contours = ListBuffer(List[MatOfPoint](): _*).asJava
-    Imgproc.findContours(matThreshold, contours, out, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+    val closed = closeOperantion(matThreshold)
+    Imgproc.findContours(closed, contours, out, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
     println(s"TYPE : ${typeSection}")
     val ContoursList = contours.asScala.filter(c => {
       val rect = Imgproc.boundingRect(c)
       val ar = rect.width / rect.height.toFloat
-      /*println(rect.width + " " + rect.height + " " + ar)*/
+      println(rect.width + " " + rect.height + " " + ar)
       rect.width >= 20 && rect.height >= 20 && ar >= 0.9 && ar <= 1.2
     }).toList
 
@@ -238,15 +251,74 @@ object Algorithm {
     println(corners.size())
     if(!corners.isEmpty && corners.size() == 4) {
       val pointsWithCenter = getCornersTuple(ids, corners.asScala.toList).flatten { v => Map(v._1.toInt -> getCenterSquare(v._1.toInt, v._2)) }.toMap
-      val codeMat = getSubMat(pointsWithCenter(CODE_1),pointsWithCenter(CODE_4), grayMat)
-      val answerMat = getSubMat(pointsWithCenter(ANSWER_20), pointsWithCenter(ANSWER_21), grayMat)
-      val Right(codeResult) = findContoursOperation(dilatationOperation(thresholdOperation(codeMat)), CODE)
-      val Right(answerResult) = findContoursOperation(dilatationOperation(thresholdOperation(answerMat)), ANSWER)
+      val codeMat = getSubMat(pointsWithCenter(CODE_12),pointsWithCenter(CODE_13), grayMat)
+      val answerMat = getSubMat(pointsWithCenter(ANSWER_42), pointsWithCenter(ANSWER_45), grayMat)
+      val Right(codeResult) = findContoursOperation(thresholdOperation(codeMat), CODE)
+      val Right(answerResult) = findContoursOperation(thresholdOperation(answerMat), ANSWER)
       Right((getCodeofMatrix(codeResult), getAnswersofMatrix(answerResult)))
     }
     else Left(TransformError("Corners are Empty, don't find the Exact Aruco Markers"))
   }
 
+  def drawdraw(grayMat:Mat): Mat = {
+    val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_ARUCO_ORIGINAL)
+    val corners = ListBuffer(List[Mat](): _*).asJava
+    val ids = new Mat()
+    Aruco.detectMarkers(grayMat, dictionary, corners, ids)
+    if(!corners.isEmpty && corners.size() == 4) {
+      findContoursOperation2(grayMat)
+      /*val pointsWithCenter = getCornersTuple(ids, corners.asScala.toList).flatten { v => Map(v._1.toInt -> getCenterSquare(v._1.toInt, v._2)) }.toMap
+      val codeMat = getSubMat(pointsWithCenter(CODE_12),pointsWithCenter(CODE_13), grayMat)
+      val answerMat = getSubMat(pointsWithCenter(ANSWER_42), pointsWithCenter(ANSWER_45), grayMat)
+      val Right(codeResult) = findContoursOperation(dilatationOperation(thresholdOperation(codeMat)), CODE)
+      val Right(answerResult) = findContoursOperation(dilatationOperation(thresholdOperation(answerMat)), ANSWER)
+      Right((getCodeofMatrix(codeResult), getAnswersofMatrix(answerResult)))*/
+    } else {
+      grayMat
+    }
+  }
+
+  def findContoursOperation2(grayMat: Mat): Mat = {
+    val matThreshold_x = (thresholdOperation(grayMat))
+    closeOperantion(matThreshold_x)
+    /*val blurred = gaussianBlurOperation(matThreshold_x)
+    val edged = cannyOperation(blurred)
+    val dilated = dilatationOperation(edged)
+    closeOperantion(dilated)*/
+    /*val out = new Mat(matThreshold.rows(), matThreshold.cols(), CvType.CV_8UC3)
+    val contours = ListBuffer(List[MatOfPoint](): _*).asJava
+    Imgproc.findContours(matThreshold, contours, out, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+    val ContoursList = contours.asScala.filter(c => {
+      val rect = Imgproc.boundingRect(c)
+      val ar = rect.width / rect.height.toFloat
+      /*println(rect.width + " " + rect.height + " " + ar)*/
+      rect.width >= 20 && rect.height >= 20 && ar >= 0.9 && ar <= 1.2
+    }).toList
+
+    Imgproc.drawContours(matThreshold, ContoursList.asJava, -1, new Scalar(255, 255, 255), -1)
+    matThreshold*/
+
+    /*def process(groupLength: Int): List[List[Int]] = {
+      sortedGroups(ContoursList, VERTICALLY).grouped(groupLength).map(sortedGroups(_,HORIZONTALLY).map(buble => {
+        val mask = Mat.zeros(matThreshold.size(), CvType.CV_8UC1)
+        Imgproc.drawContours(mask, List(buble).asJava, -1, new Scalar(255, 255, 255), -1)
+        Core.bitwise_and(matThreshold, matThreshold, mask, mask)
+        val total = Core.countNonZero(mask)
+        if (total > 500) 1
+        else 0
+      })).toList
+    }
+
+    println(s"number of circles of answers ${ContoursList.length}")
+    val quantity = if(typeSection == ANSWER) numberContoursOfAnswers else numberContoursOfCodes
+    val groupDivide = if(typeSection == ANSWER) 20 else 6
+    (typeSection, ContoursList, quantity, groupDivide) match {
+      case (t,c,q,g) if c.length == q =>
+        Right(process(g))
+      case _ =>
+        Left(TransformError(s"Error : number of contours below limit ${ContoursList.length} < $quantity"))
+    }*/
+  }
 
   def getCodeofMatrix(matrix: List[List[Int]]):String = {
     val code = Array.fill(7)('_')
@@ -290,9 +362,9 @@ object Algorithm {
     val x1_y1 = (corner.get(0, 0)(0).toInt, corner.get(0, 0)(1).toInt)
     val x2_y2 = (corner.get(0, 2)(0).toInt, corner.get(0, 2)(1).toInt)
     _id match {
-      case CODE_1 => x2_y2
-      case CODE_4 => x1_y1
-      case ANSWER_20 => x2_y2
+      case CODE_12 => x2_y2
+      case CODE_13 => x1_y1
+      case ANSWER_42 => x2_y2
       case _ => x1_y1
     }
   }
