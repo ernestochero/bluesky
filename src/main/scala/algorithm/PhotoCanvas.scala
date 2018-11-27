@@ -71,8 +71,8 @@ class PhotoCanvas extends JComponent {
     Algorithm.calificateTemplate(img) match {
       case Right(result) =>
         val (code,answers) = result
-        println(code)
-        answers.zipWithIndex.foreach(println(_))
+        code.foreach(println(_))
+        answers.sortBy(_.index).foreach(println(_))
       case Left(failure) => println(failure.error)
     }
   }

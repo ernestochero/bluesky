@@ -19,7 +19,7 @@ object ViewMain {
     val openMenuItem = new JMenuItem("open...")
     openMenuItem.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        val fc = new JFileChooser()
+        val fc = new JFileChooser("/home/ernesto/Documents/imagesTheshis/examScanned/")
         if( fc.showOpenDialog(AlgorithmFrame.this) == JFileChooser.APPROVE_OPTION) canvas.loadFile(fc.getSelectedFile.getPath)
       }
     })

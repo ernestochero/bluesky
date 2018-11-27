@@ -1,5 +1,32 @@
-val list = Nil
-list.headOption
+import scala.util.Try
+import scala.util.{Failure, Success}
+val group = List(0,1,0,1,0)
+val group2 = List(2,0,1,0,0)
+val group3 = List(0,2,2,0,0)
+val group4 = List(1,2,2,1,1)
+
+val (l,r) = group.splitAt(3)
+l ++ r.tail
+
+val countG = group3.groupBy(identity).mapValues(_.length).filterKeys(_ != 0)
+if ( countG == 1) {
+  Try(countG(1)) match {
+    case Success(value) if value == 1 => println("holy was success")
+    case Failure(exception) => println("fuck of , it failed ")
+  }
+} else {
+  println("fuck of , it failed ")
+}
+
+/*500/5
+498/20
+
+val perfect = (1 to 500).toList
+val wrong = (1 to 498).toList
+
+perfect.grouped(20).foreach(c => println(c.mkString(" ")))
+wrong.grouped(20).foreach(c => println(c.mkString(" ")))*/
+/*494/5*/
 
 /*
 val x = Array(("ernesto","Chero",true),
