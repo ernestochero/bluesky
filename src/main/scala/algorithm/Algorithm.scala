@@ -155,7 +155,16 @@ object Algorithm {
     (width, height)
   }
 
-  def rotationWrap(mat: Mat): Either[TransformError, Mat] = {
+  def warpPerspectiveOperation2(mat: Mat): Mat = {
+    val gray = grayScaleOperation(mat)
+    val blurred = gaussianBlurOperation(gray)
+    val edged = cannyOperation(blurred)
+    val dilated = dilatationOperation(edged)
+    val edgedCopy = new Mat(edged.rows(), edged.cols(), edged.`type`())
+    dilated
+  }
+
+  def warpPerspectiveOperation(mat: Mat): Either[TransformError, Mat] = {
     val gray = grayScaleOperation(mat)
     val blurred = gaussianBlurOperation(gray)
     val edged = cannyOperation(blurred)
@@ -195,7 +204,7 @@ object Algorithm {
         Right(destImageFinal)
 
       case _ =>
-        Left(TransformError("Impossible to get contour to apply wrapPerspective"))
+        Left(TransformError("Impossible to get contour to apply warpPerspective"))
     }
 
   }
@@ -226,9 +235,9 @@ object Algorithm {
 
     def process(groupLength: Int): List[List[Int]] = {
       sortedGroups(ContoursList, VERTICALLY).grouped(groupLength).map(sortedGroups(_,HORIZONTALLY).map(buble => {
-        val mask = Mat.zeros(matThreshold.size(), CvType.CV_8UC1)
+        val mask = Mat.zeros(closed.size(), CvType.CV_8UC1)
         Imgproc.drawContours(mask, List(buble).asJava, -1, new Scalar(255, 255, 255), -1)
-        Core.bitwise_and(matThreshold, matThreshold, mask, mask)
+        Core.bitwise_and(closed, closed, mask, mask)
         val total = Core.countNonZero(mask)
         if (total >= 350) 1
         else if ( total >= 240 ) 2
@@ -320,10 +329,26 @@ object Algorithm {
 
       println(s"contours ${contoursList.size}")
 
-       // Imgproc.drawContours(answerMat, contoursList, -1, new Scalar(255, 255, 255), -1 )
+      //Imgproc.drawContours(codeMat, contoursList, -1, new Scalar(255, 255, 255), -1 )
 
       /*val s = openOperantion(closed)
       openOperantion(s)*/
+      val groupLength = 7
+
+      val mask = Mat.zeros(matThreshold_x.size(), CvType.CV_8UC1)
+
+      /*sortedGroups(contoursList.asScala.toList, VERTICALLY).grouped(groupLength).toList.foreach(g1 => {
+        sortedGroups(g1,HORIZONTALLY).foreach(b => {
+          Imgproc.drawContours(mask, List(b).asJava, -1, new Scalar(255, 255, 255), -1)
+          Core.bitwise_and(closed, closed, mask, mask)
+        })
+      })
+*/
+
+      // Core.bitwise_and(matThreshold_x, matThreshold_x, mask, mask)
+
+      // val total = Core.countNonZero(mask)
+
       closed
 
     } else {

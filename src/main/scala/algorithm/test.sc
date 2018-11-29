@@ -1,4 +1,15 @@
-import scala.util.Try
+val arr = Array("1", "0","0","0","0", "1")
+
+def random(str:String):Either[String,Int] = {
+  if ( str == "1") Left("hola")
+  else Right(-1)
+}
+
+
+
+
+
+/*import scala.util.Try
 import scala.util.{Failure, Success}
 val group = List(0,1,0,1,0)
 val group2 = List(2,0,1,0,0)
@@ -16,7 +27,7 @@ if ( countG == 1) {
   }
 } else {
   println("fuck of , it failed ")
-}
+}*/
 
 /*500/5
 498/20
