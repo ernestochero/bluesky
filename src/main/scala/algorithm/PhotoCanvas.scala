@@ -1,7 +1,8 @@
 package algorithm
 import java.awt.Graphics
 import java.awt.image.BufferedImage
-import java.io.{FileInputStream, InputStream, File}
+import java.io.{File, FileInputStream, InputStream}
+import java.util.regex.Pattern
 
 import javax.imageio.ImageIO
 import javax.swing.JComponent
@@ -11,6 +12,10 @@ class PhotoCanvas extends JComponent {
   val stream = this.getClass.getResourceAsStream("/exams/empty.png")
 
   var image = loadScalaImage(stream)
+
+  var pattern = (List.empty[Answer], List.empty[Answer])
+  var examsResult =  Array.empty[(List[Answer], List[Answer])]
+  var qualifyResults = Array.empty[(String, Int)]
 
   private def loadScalaImage(stream:InputStream): BufferedImage = {
     try {
@@ -51,16 +56,27 @@ class PhotoCanvas extends JComponent {
     reload()
   }
 
+  def applyQualify(): Unit = {
+    this.qualifyResults = qualify(examsResult, pattern)
+  }
+
+  def qualify(exams:Array[(List[Answer], List[Answer])], pattern: (List[Answer], List[Answer])) = {
+    def compare(ec:Char, pc:Char):Int = if ( ec == pc ) 1 else 0
+    def f( e:(List[Answer], List[Answer]), p:(List[Answer], List[Answer]) ):(String,Int) = {
+      val code = e._1.map(_.value).mkString("")
+      // val answers = e._2.map(c => (c.index, c.value))
+      val total = e._2.map(_.value).zip(p._2.map(_.value)).map(c => compare(c._1,c._2)).sum
+      (code, total)
+    }
+    exams.map(f(_,pattern))
+  }
 
   def uploadPattern(path: String):Unit = {
     val image  = loadFileImage(path)
     Algorithm.warpPerspectiveOperation(Algorithm.bufferedImageToMat(image)) match {
       case Right(result) =>
         Algorithm.calificateTemplate(result) match {
-          case Right(result) =>
-            val (code,answers) = result
-            code.foreach(println(_))
-            answers.sortBy(_.index).foreach(println(_))
+          case Right(result) => this.pattern = result
           case Left(failure) => println(failure.error)
         }
         this.image = Algorithm.matToBufferedImage(result)
@@ -68,11 +84,8 @@ class PhotoCanvas extends JComponent {
     }
   }
 
-
-
   def uploadExams(paths: Array[String]): Unit = {
     val t0 = System.nanoTime()
-    var results = Array.empty[(List[Answer], List[Answer])]
     var i = 1
 
     paths.foreach( path => {
@@ -80,7 +93,7 @@ class PhotoCanvas extends JComponent {
         case Right(value) => {
           Algorithm.calificateTemplate(value) match {
             case Right(result) => {
-              results = results :+ result
+              this.examsResult = this.examsResult :+ result
               println(s"Done Exam ${i}")
               i = i + 1
             }
@@ -92,7 +105,7 @@ class PhotoCanvas extends JComponent {
     })
     val t1 = System.nanoTime()
     println("Elapsed time: " + (t1 - t0) + "ns")
-    println(s"Total of Exams Analyzed  = ${results.length}")
+    println(s"Total of Exams Analyzed  = ${this.examsResult.length}")
   }
 
 

@@ -392,14 +392,14 @@ object Algorithm {
       } else 'x'
     }
 
-    matrix.foldLeft((List.empty[Answer],1)) { (acc, value) =>
+    matrix.par.foldLeft((List.empty[Answer],1)) { (acc, value) =>
       val env = Map(0 -> 'a', 1 ->'b',2 -> 'c', 3 ->'d',4 -> 'e')
       val chars = value.grouped(5).map(f(_,env)).toArray
       val answers = chars.foldLeft((List.empty[Answer],0)) { (a,b) =>
         (a._1 :+ Answer(acc._2 + a._2, b, ANSWER), a._2 + 25)
       }._1
       (acc._1 ++ answers, acc._2 + 1)
-    }._1
+    }._1.sortBy(_.index)
   }
 
   def getCornersTuple(ids: Mat, corners: List[Mat]): List[(Double, Mat)] = {
@@ -422,6 +422,7 @@ object Algorithm {
       case _ => x1_y1
     }
   }
+
 
   def getSubMat(c1: (Int, Int), c2: (Int, Int), img: Mat): Mat = {
     img.submat(c1._2, c2._2, c1._1, c2._1)

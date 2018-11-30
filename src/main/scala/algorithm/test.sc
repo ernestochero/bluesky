@@ -6,8 +6,10 @@ def random(str:String):Either[String,Int] = {
 }
 
 
-
-
+val ex = Array("a", "b", "a", "b","a", "b")
+val pat = Array("a", "b", "c", "b","a", "c")
+def compare(par:(String,String)):Int = if ( par._1 == par._2 ) 1 else 0
+ex.zip(pat).map(compare).sum
 
 /*import scala.util.Try
 import scala.util.{Failure, Success}

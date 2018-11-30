@@ -12,7 +12,7 @@ object ViewMain {
     this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
     this.setLayout(new BorderLayout)
     /* collocate fullscreen size*/
-    this.setSize(1250,710)
+    this.setSize(1280,710)
     this.setLocationRelativeTo(null)
 
     /* here add menu of application */
@@ -120,6 +120,16 @@ object ViewMain {
     uploadExamsIcon.setBorder(new EmptyBorder(5,5,5,5))
     controls.add(uploadExamsIcon)
 
+    // results
+    val line1 = new JLabel(" ------------------ ")
+    controls.add(line1)
+
+    val qualifyButton = new JButton("qualify")
+    qualifyButton.addActionListener(e => canvas.applyQualify())
+    controls.add(qualifyButton)
+
+    val line2 = new JLabel(" ------------------ ")
+    controls.add(line2)
 
     val rotateOpButton = new JButton("apply rotate")
     rotateOpButton.addActionListener(new ActionListener {
