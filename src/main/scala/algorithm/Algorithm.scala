@@ -86,10 +86,10 @@ object Algorithm {
     Imgproc.cvtColor(mat, out, Imgproc.COLOR_RGB2GRAY)
     out
   }
-
+// 165
   def thresholdOperation(mat: Mat): Mat = {
     val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
-    Imgproc.threshold(mat, out, 0, 255, Imgproc.THRESH_OTSU | Imgproc.THRESH_BINARY_INV)
+    Imgproc.threshold(mat, out, 170, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C)
     out
   }
 
@@ -119,13 +119,13 @@ object Algorithm {
 
   def openOperantion(mat: Mat): Mat = {
     val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
-    Imgproc.morphologyEx(mat, out, Imgproc.MORPH_OPEN, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3)))
+    Imgproc.morphologyEx(mat, out, Imgproc.MORPH_OPEN, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(2, 2)))
     out
   }
 
   def closeOperantion(mat: Mat): Mat = {
     val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
-    Imgproc.morphologyEx(mat, out, Imgproc.MORPH_CLOSE, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3)))
+    Imgproc.morphologyEx(mat, out, Imgproc.MORPH_CLOSE, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(4, 4)))
     out
   }
 
@@ -136,7 +136,7 @@ object Algorithm {
   }
 
   def sortPoints(points:MatOfPoint2f,refer:Point): MatOfPoint2f = {
-    val arr = points.toArray.map((point) => {
+    val arr = points.toArray.map(point => {
       (distance(refer,point),point)
     }).sortWith(_._1 < _._1)
 
@@ -193,7 +193,6 @@ object Algorithm {
 
     doCnt match {
       case Some(cnt) =>
-        val cnt = doCnt.get
         val cntOrdered = sortPoints(cnt, new Point(0,0))
         val measures = getSizeOfQuad(cntOrdered)
         val destImage = new Mat(measures._2.toInt, measures._1.toInt, mat.`type`())
@@ -226,33 +225,43 @@ object Algorithm {
     val closed = closeOperantion(matThreshold)
     Imgproc.findContours(closed, contours, out, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
     println(s"TYPE : ${typeSection}")
-    val ContoursList = contours.asScala.filter(c => {
+    val contoursList = contours.asScala.filter(c => {
       val rect = Imgproc.boundingRect(c)
+
       val ar = rect.width / rect.height.toFloat
      /* println(rect.width + " " + rect.height + " " + ar)*/
       rect.width >= 20 && rect.height >= 20 && ar >= 0.6 && ar <= 1.4
     }).toList
 
     def process(groupLength: Int): List[List[Int]] = {
-      sortedGroups(ContoursList, VERTICALLY).grouped(groupLength).map(sortedGroups(_,HORIZONTALLY).map(buble => {
+      val list = sortedGroups(contoursList, VERTICALLY).grouped(groupLength).map(sortedGroups(_,HORIZONTALLY).map(bubble => {
         val mask = Mat.zeros(closed.size(), CvType.CV_8UC1)
-        Imgproc.drawContours(mask, List(buble).asJava, -1, new Scalar(255, 255, 255), -1)
+        Imgproc.drawContours(mask, List(bubble).asJava, -1, new Scalar(255, 255, 255), -1)
         Core.bitwise_and(closed, closed, mask, mask)
         val total = Core.countNonZero(mask)
-        if (total >= 350) 1
-        else if ( total >= 240 ) 2
+        if (total >= 280) 1
+        else if ( total >= 210 ) 2
         else 0
       })).toList
+
+     /* list.zipWithIndex.foreach{c =>
+        print(s"row ${c._2} -> ")
+        c._1.grouped(5).foreach{ x =>
+          print(s"${x.mkString(" ")} - ")
+        }
+        println("")
+      }*/
+
+      list
+
     }
 
-    println(s"number of circles of answers ${ContoursList.length}")
-    val quantity = if(typeSection == ANSWER) numberContoursOfAnswers else numberContoursOfCodes
-    val groupDivide = if(typeSection == ANSWER) 20 else 7
-    (typeSection, ContoursList, quantity, groupDivide) match {
-      case (t,c,q,g) if c.length == q =>
-        Right(process(g))
-      case _ =>
-        Left(TransformError(s"Error : number of contours below limit ${ContoursList.length} < $quantity"))
+    println(s"number of circles of answers ${contoursList.length}")
+    val (quantity, groupDivide) = if(typeSection == ANSWER) (numberContoursOfAnswers, 20) else (numberContoursOfCodes, 7)
+    if ( contoursList.length == quantity ) {
+      Right(process(groupDivide))
+    } else {
+      Left(TransformError(s"Error : number of contours below limit ${contoursList.length} < $quantity"))
     }
   }
 

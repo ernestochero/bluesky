@@ -21,7 +21,7 @@ object ViewMain {
     val openMenuItem = new JMenuItem("open...")
     openMenuItem.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        val fc = new JFileChooser("/home/ernesto/Documents/imagesTheshis/examScanned/")
+        val fc = new JFileChooser("/home/ernesto/Documents/imagesThesis/examScanned/")
         val result = fc.showOpenDialog(AlgorithmFrame.this)
         if( result == JFileChooser.APPROVE_OPTION) { canvas.loadFile(fc.getSelectedFile.getPath) }
         /*
@@ -79,7 +79,7 @@ object ViewMain {
     val uploadPatternButton = new JButton("upload")
     uploadPatternButton.addActionListener(new ActionListener {
       override def actionPerformed(e: ActionEvent): Unit = {
-        val fc = new JFileChooser("/home/ernesto/Documents/imagesTheshis/examScanned/")
+        val fc = new JFileChooser("/home/ernesto/Documents/imagesThesis/examScanned/")
         if( fc.showOpenDialog(AlgorithmFrame.this) == JFileChooser.APPROVE_OPTION) canvas.uploadPattern(fc.getSelectedFile.getPath)
         uploadPatternIcon.setText(" successfully ")
       }
@@ -101,7 +101,7 @@ object ViewMain {
     val uploadExamsButton = new JButton("upload")
     uploadExamsButton.addActionListener(new ActionListener {
       override def actionPerformed(e: ActionEvent): Unit = {
-        val fc = new JFileChooser("/home/ernesto/Documents/imagesTheshis/")
+        val fc = new JFileChooser("/home/ernesto/Documents/imagesThesis/")
         fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY)
         fc.setAcceptAllFileFilterUsed(false)
         fc.setMultiSelectionEnabled(true)
@@ -131,19 +131,22 @@ object ViewMain {
     val line2 = new JLabel(" ------------------ ")
     controls.add(line2)
 
-    val rotateOpButton = new JButton("apply rotate")
+    val rotateOpButton = new JButton("apply test operations")
     rotateOpButton.addActionListener(new ActionListener {
-      override def actionPerformed(actionEvent: ActionEvent): Unit = canvas.applyRotateOperation()
+      override def actionPerformed(actionEvent: ActionEvent): Unit = {
+        val fc = new JFileChooser("/home/ernesto/Documents/imagesThesis/")
+        if( fc.showOpenDialog(AlgorithmFrame.this) == JFileChooser.APPROVE_OPTION) canvas.testAlgorithmImages(fc.getSelectedFile.getPath)
+      }
     })
     controls.add(rotateOpButton)
 
-    val qualifyOpButton = new JButton("apply qualify")
+/*    val qualifyOpButton = new JButton("apply qualify")
     qualifyOpButton.addActionListener(new ActionListener {
       override def actionPerformed(e: ActionEvent): Unit = {
         canvas.applyGrayScaleOperation()
       }
     })
-    controls.add(qualifyOpButton)
+    controls.add(qualifyOpButton)*/
 
 
 

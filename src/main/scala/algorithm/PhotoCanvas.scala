@@ -2,10 +2,16 @@ package algorithm
 import java.awt.Graphics
 import java.awt.image.BufferedImage
 import java.io.{File, FileInputStream, InputStream}
-import java.util.regex.Pattern
 
+import algorithm.Algorithm.{ANSWER, ANSWER_42, ANSWER_45, CODE, CODE_12, CODE_13, findContoursOperation, getCenterSquare, getCornersTuple, getSubMat, thresholdOperation}
+
+import scala.collection.JavaConverters._
 import javax.imageio.ImageIO
 import javax.swing.JComponent
+import org.opencv.aruco.Aruco
+import org.opencv.core.Mat
+
+import scala.collection.mutable.ListBuffer
 
 class PhotoCanvas extends JComponent {
   var imagePath: Option[String] = None
@@ -58,6 +64,9 @@ class PhotoCanvas extends JComponent {
 
   def applyQualify(): Unit = {
     this.qualifyResults = qualify(examsResult, pattern)
+    this.qualifyResults.foreach { p =>
+      println(s"Code : ${p._1} ---> final result : ${p._2}" )
+    }
   }
 
   def qualify(exams:Array[(List[Answer], List[Answer])], pattern: (List[Answer], List[Answer])) = {
@@ -68,18 +77,29 @@ class PhotoCanvas extends JComponent {
       val total = e._2.map(_.value).zip(p._2.map(_.value)).map(c => compare(c._1,c._2)).sum
       (code, total)
     }
-    exams.map(f(_,pattern))
+
+    def showsValuesRecognize(exam:(List[Answer],List[Answer])): Unit = {
+      val (code, alternatives) = exam
+      println(code.map(_.value).mkString(""))
+      alternatives.foreach(a => println(s"${a.value}"))
+    }
+    // that's a bad pattern but I just do for test purpose
+    //showsValuesRecognize(exam)
+    exams.map(exam => {
+      f(exam,pattern)
+    })
   }
 
   def uploadPattern(path: String):Unit = {
     val image  = loadFileImage(path)
-    Algorithm.warpPerspectiveOperation(Algorithm.bufferedImageToMat(image)) match {
-      case Right(result) =>
-        Algorithm.calificateTemplate(result) match {
+    val matImage = Algorithm.bufferedImageToMat(image)
+    Algorithm.warpPerspectiveOperation(matImage) match {
+      case Right(img) =>
+        Algorithm.calificateTemplate(img) match {
           case Right(result) => this.pattern = result
           case Left(failure) => println(failure.error)
         }
-        this.image = Algorithm.matToBufferedImage(result)
+        this.image = Algorithm.matToBufferedImage(img)
       case Left(failure) => println(failure.error)
     }
   }
@@ -129,6 +149,38 @@ class PhotoCanvas extends JComponent {
         repaint()
       case Left(failure) => println(failure.error)
     }
+  }
+
+  def testAlgorithmImages(path:String): Unit = {
+    val image = loadFileImage(path)
+    val matImage = Algorithm.bufferedImageToMat(image)
+    val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_4X4_50)
+    val corners = ListBuffer(List[Mat](): _*).asJava
+    val ids = new Mat()
+    // warpPerspective
+    Algorithm.warpPerspectiveOperation(matImage) match {
+      case Right(img) =>
+        Aruco.detectMarkers(img, dictionary, corners, ids)
+        println(corners.size())
+
+        val threshold = Algorithm.thresholdOperation(img)
+        val close = Algorithm.closeOperantion(threshold)
+        this.image = Algorithm.matToBufferedImage(close)
+
+        val pointsWithCenter = getCornersTuple(ids, corners.asScala.toList).flatten { v => Map(v._1.toInt -> getCenterSquare(v._1.toInt, v._2)) }.toMap
+        val codeMat = getSubMat(pointsWithCenter(CODE_12),pointsWithCenter(CODE_13), img)
+        val answerMat = getSubMat(pointsWithCenter(ANSWER_42), pointsWithCenter(ANSWER_45), img)
+        val Right(codeResult) = findContoursOperation(thresholdOperation(codeMat), CODE)
+        val Right(answerResult) = findContoursOperation(thresholdOperation(answerMat), ANSWER)
+      case Left(failure) => println(failure.error)
+    }
+
+    /*
+    val gray = Algorithm.grayScaleOperation(matImage)
+    val threshold = Algorithm.thresholdOperation(gray)
+    val open = Algorithm.openOperantion(threshold)
+    val firstDilatation = Algorithm.dilatationOperation(open)*/
+
   }
 
   def applyGrayScaleOperation(): Unit = {
