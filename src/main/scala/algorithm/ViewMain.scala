@@ -1,8 +1,10 @@
 package algorithm
-import java.awt.{BorderLayout, Dimension, GridLayout, Toolkit}
+import java.awt._
 import java.awt.event._
+
 import org.opencv.core.Core
 import javax.swing._
+import javax.swing.border.EmptyBorder
 object ViewMain {
 
   class AlgorithmFrame extends JFrame("AlgorithmBachelorThesis\u2122") {
@@ -10,7 +12,7 @@ object ViewMain {
     this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
     this.setLayout(new BorderLayout)
     /* collocate fullscreen size*/
-    this.setSize(1300,1000)
+    this.setSize(1280,710)
     this.setLocationRelativeTo(null)
 
     /* here add menu of application */
@@ -19,8 +21,13 @@ object ViewMain {
     val openMenuItem = new JMenuItem("open...")
     openMenuItem.addActionListener(new ActionListener {
       override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        val fc = new JFileChooser()
-        if( fc.showOpenDialog(AlgorithmFrame.this) == JFileChooser.APPROVE_OPTION) canvas.loadFile(fc.getSelectedFile.getPath)
+        val fc = new JFileChooser("/home/ernesto/Documents/imagesThesis/examScanned/")
+        val result = fc.showOpenDialog(AlgorithmFrame.this)
+        if( result == JFileChooser.APPROVE_OPTION) { canvas.loadFile(fc.getSelectedFile.getPath) }
+        /*
+        * else if (result == JFileChooser.CANCEL_OPTION){
+        }
+        * */
       }
     })
     fileMenu.add(openMenuItem)
@@ -53,19 +60,95 @@ object ViewMain {
     this.add(operationsPanel,BorderLayout.EAST)
 
     val controls = new JPanel
-    controls.setLayout(new GridLayout(0, 2))
+    controls.setLayout(new GridLayout(0, 3, 10 , 30))
+    controls.setBorder(new EmptyBorder(10, 10, 10, 10))
     operationsPanel.add(controls, BorderLayout.NORTH)
 
-    val execute = new JLabel("execute")
-    controls.add(execute)
 
-    val executeOpButton = new JButton("execute")
-    executeOpButton.addActionListener(new ActionListener {
+   /* val controlsBottom = new JPanel
+    controls.setLayout(new GridLayout(2, 1, 10 , 10))
+    controls.setBorder(new EmptyBorder(10, 10, 10, 10))
+    operationsPanel.add(controlsBottom, BorderLayout.SOUTH)
+*/
+    /* here add component to left panel*/
+    // upload exam pattern
+    val uploadPatternLabel = new JLabel("Upload Pattern : ")
+    uploadPatternLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK))
+    controls.add(uploadPatternLabel)
+
+    val uploadPatternButton = new JButton("upload")
+    uploadPatternButton.addActionListener(new ActionListener {
+      override def actionPerformed(e: ActionEvent): Unit = {
+        val fc = new JFileChooser("/home/ernesto/Documents/imagesThesis/examScanned/")
+        if( fc.showOpenDialog(AlgorithmFrame.this) == JFileChooser.APPROVE_OPTION) canvas.uploadPattern(fc.getSelectedFile.getPath)
+        uploadPatternIcon.setText(" successfully ")
+      }
+    })
+    uploadPatternButton.setForeground(Color.BLUE)
+    uploadPatternButton.setToolTipText("exam pattern : It's used to evaluate the others exams")
+    controls.add(uploadPatternButton)
+
+    val uploadPatternIcon = new JLabel(" := empty pattern ")
+    uploadPatternIcon.setBorder(BorderFactory.createLineBorder(Color.BLACK))
+    controls.add(uploadPatternIcon)
+
+
+    // upload exams
+    val uploadExams = new JLabel("Upload Exams : ")
+    uploadExams.setBorder(BorderFactory.createLineBorder(Color.BLACK))
+    controls.add(uploadExams)
+
+    val uploadExamsButton = new JButton("upload")
+    uploadExamsButton.addActionListener(new ActionListener {
+      override def actionPerformed(e: ActionEvent): Unit = {
+        val fc = new JFileChooser("/home/ernesto/Documents/imagesThesis/")
+        fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY)
+        fc.setAcceptAllFileFilterUsed(false)
+        fc.setMultiSelectionEnabled(true)
+        if( fc.showOpenDialog(AlgorithmFrame.this) == JFileChooser.APPROVE_OPTION) {
+          val paths = fc.getSelectedFile.listFiles().map(_.getPath)
+          canvas.uploadExams(paths)
+          uploadExamsIcon.setText(s" ${paths.length} Exams Uploaded")
+        }
+      }
+    })
+    uploadExamsButton.setForeground(Color.BLUE)
+    controls.add(uploadExamsButton)
+
+
+    val uploadExamsIcon = new JLabel(" 0 Exams ")
+    uploadExamsIcon.setBorder(new EmptyBorder(5,5,5,5))
+    controls.add(uploadExamsIcon)
+
+    // results
+    val line1 = new JLabel(" ------------------ ")
+    controls.add(line1)
+
+    val qualifyButton = new JButton("qualify")
+    qualifyButton.addActionListener(e => canvas.applyQualify())
+    controls.add(qualifyButton)
+
+    val line2 = new JLabel(" ------------------ ")
+    controls.add(line2)
+
+    val rotateOpButton = new JButton("apply test operations")
+    rotateOpButton.addActionListener(new ActionListener {
+      override def actionPerformed(actionEvent: ActionEvent): Unit = {
+        val fc = new JFileChooser("/home/ernesto/Documents/imagesThesis/")
+        if( fc.showOpenDialog(AlgorithmFrame.this) == JFileChooser.APPROVE_OPTION) canvas.testAlgorithmImages(fc.getSelectedFile.getPath)
+      }
+    })
+    controls.add(rotateOpButton)
+
+/*    val qualifyOpButton = new JButton("apply qualify")
+    qualifyOpButton.addActionListener(new ActionListener {
       override def actionPerformed(e: ActionEvent): Unit = {
         canvas.applyGrayScaleOperation()
       }
     })
-    controls.add(executeOpButton)
+    controls.add(qualifyOpButton)*/
+
+
 
     val canvas = new PhotoCanvas
     val scrollPane = new JScrollPane(canvas)
