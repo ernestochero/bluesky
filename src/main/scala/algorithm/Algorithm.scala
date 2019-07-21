@@ -19,6 +19,8 @@ case class Result(success: Int, failures: Int)
 
 case class Answer(index:Int, value:Char, category:String)
 
+case class Exam(code:List[Answer], alternatives: List[Answer])
+
 object Algorithm {
 
   val CODE_12 = 12
@@ -135,17 +137,27 @@ object Algorithm {
     math.sqrt(d1 + d2)
   }
 
-  def sortPoints(points:MatOfPoint2f,refer:Point): MatOfPoint2f = {
-    val arr = points.toArray.map(point => {
-      (distance(refer,point),point)
-    }).sortWith(_._1 < _._1)
+  // _ < _
+  def sortPointsWithReference(point1: Point, point2: Point, pointReference: Point): Boolean = {
+    val distance1 = distance(point1, pointReference)
+    val distance2 = distance(point2, pointReference)
+    distance1 < distance2
+  }
 
-    val x1_y1 = arr.head._2
-    val x3_y3 = arr.last._2
-    val subArr = Array(arr(1),arr(2)).sortWith(_._2.x < _._2.x)
-    val x4_y4 = subArr.head._2
-    val x2_x2 = subArr.last._2
-    new MatOfPoint2f(x1_y1, x2_x2, x3_y3, x4_y4)
+
+  def sortPoints(points:MatOfPoint2f,refer:Point): MatOfPoint2f = {
+    val pointsSorted = points.toArray.sortWith( (point1, point2) => {
+      sortPointsWithReference(point1, point2, refer)
+    })
+
+    val subPointsSorted = Array(pointsSorted(1),pointsSorted(2)).sortWith(_.x < _.x)
+
+    val x1y1 = pointsSorted(0)
+    val x3y3 = pointsSorted(3)
+    val x4y4 = subPointsSorted(0)
+    val x2y2 = subPointsSorted(1)
+
+    new MatOfPoint2f(x1y1, x2y2, x3y3, x4y4)
   }
 
   def getSizeOfQuad(points:MatOfPoint2f):(Double, Double) = {
@@ -162,6 +174,61 @@ object Algorithm {
     val dilated = dilatationOperation(edged)
     val edgedCopy = new Mat(edged.rows(), edged.cols(), edged.`type`())
     dilated
+  }
+
+
+  def sortMatOfPoint(mop1: MatOfPoint, mop2: MatOfPoint) : Boolean = {
+    val contourArea1 = Imgproc.contourArea(mop1.t())
+    val contourArea2 = Imgproc.contourArea(mop2.t())
+    contourArea1 > contourArea2
+  }
+
+  def findSquare(list: List[MatOfPoint]): Option[MatOfPoint2f] = {
+    var square: Option[MatOfPoint2f] = None
+    breakable {
+      for( c <- list) {
+        val curve = new core.MatOfPoint2f()
+        val approx = new core.MatOfPoint2f()
+        c.convertTo(curve, CvType.CV_32FC2)
+        val peri = Imgproc.arcLength(curve, true)
+        Imgproc.approxPolyDP(curve, approx, 0.02 * peri, true)
+        if (approx.toList.size() == 4) {
+          square = Some(approx)
+          break()
+        }
+      }
+    }
+    square
+  }
+
+  def warpPerspectiveOperationOpt(mat: Mat): Option[Mat] = {
+    val gray = grayScaleOperation(mat)
+    val blurred = gaussianBlurOperation(gray)
+    val edged = cannyOperation(blurred)
+    val dilated = dilatationOperation(edged)
+    val edgedCopy = new Mat(edged.rows(), edged.cols(), edged.`type`())
+    edged.copyTo(edgedCopy)
+    val contours = ListBuffer(List[MatOfPoint](): _*).asJava
+    Imgproc.findContours(dilated, contours, edgedCopy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+    if(!contours.isEmpty) {
+      val contoursSorted = contours.asScala.sortWith(sortMatOfPoint).toList
+      val squareFound = findSquare(contoursSorted)
+      squareFound.map { square =>
+        val pointsSorted = sortPoints(square, new Point(0,0))
+        val measures = getSizeOfQuad(pointsSorted)
+        val destImage = new Mat(measures._2.toInt, measures._1.toInt, mat.`type`())
+        val dst_mat = new MatOfPoint2f(
+          new Point(0,0),
+          new Point(destImage.width() - 1, 0),
+          new Point(destImage.width() - 1, destImage.height() - 1),
+          new Point(0, destImage.height() - 1)
+        )
+        val transform = Imgproc.getPerspectiveTransform(pointsSorted, dst_mat)
+        Imgproc.warpPerspective(gray, destImage, transform, destImage.size())
+        dilatationOperation(destImage)
+      }
+    } else None
+
   }
 
   def warpPerspectiveOperation(mat: Mat): Either[TransformError, Mat] = {
@@ -219,6 +286,51 @@ object Algorithm {
     })
   }
 
+  def filterContour(contour: MatOfPoint): Boolean = {
+    val rect = Imgproc.boundingRect(contour)
+    val ar = rect.width / rect.height.toFloat
+    rect.width >= 20 && rect.height >= 20 && ar >= 0.6 && ar <= 1.4
+  }
+
+  def evaluateBubble(bubble: MatOfPoint, closed: Mat) = {
+    val mask = Mat.zeros(closed.size(), CvType.CV_8UC1)
+    Imgproc.drawContours(
+      mask,
+      List(bubble).asJava,
+      -1,
+      new Scalar(255, 255, 255),
+      -1
+    )
+    Core.bitwise_and(closed, closed, mask, mask)
+    val total = Core.countNonZero(mask)
+    if (total >= 280) 1
+    else if ( total >= 210 ) 2
+    else 0
+  }
+
+  def findContoursOperationOpt(matThreshold: Mat, typeSection: String): Option[List[List[Int]]] = {
+    val out = new Mat(matThreshold.rows(), matThreshold.cols(), CvType.CV_8UC3)
+    val contours = ListBuffer(List[MatOfPoint](): _*).asJava
+    val closed = closeOperantion(matThreshold)
+    Imgproc.findContours(closed, contours, out, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+    val contoursList = contours.asScala.filter(filterContour).toList
+
+    def process(groupLength: Int): List[List[Int]] = {
+      val result =  sortedGroups(contoursList, VERTICALLY).grouped(groupLength)
+        .map(sortedGroups(_, HORIZONTALLY).map(bubble => evaluateBubble(bubble, closed)))
+      result.toList
+    }
+
+    val (quantity, groupDivide) = if(typeSection == ANSWER) (numberContoursOfAnswers, 20) else (numberContoursOfCodes, 7)
+
+    if ( contoursList.length == quantity ) {
+      Some(process(groupDivide))
+    } else {
+      println(s"Error : number of contours below limit ${contoursList.length} < $quantity")
+      None
+    }
+  }
+
   def findContoursOperation(matThreshold: Mat, typeSection: String): Either[TransformError,List[List[Int]]] = {
     val out = new Mat(matThreshold.rows(), matThreshold.cols(), CvType.CV_8UC3)
     val contours = ListBuffer(List[MatOfPoint](): _*).asJava
@@ -273,6 +385,50 @@ object Algorithm {
     Aruco.drawDetectedMarkers(grayMat,corners,ids,new Scalar(0, 0, 255))
     grayMat
   }
+
+  def qualifyTemplateOpt(img: Mat): Option[Exam] = {
+    val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_4X4_50)
+    val corners = ListBuffer(List[Mat](): _*).asJava
+    val ids = new Mat()
+    Aruco.detectMarkers(img, dictionary, corners, ids)
+    if (!corners.isEmpty && corners.size() == 4) {
+      val pointsWithCenter = getCornersTuple(ids, corners.asScala.toList)
+        .flatMap( markWithCode => {
+          val id = markWithCode._1.toInt
+          Map( id -> getCenterSquare(id, markWithCode._2))
+        }).toMap
+
+      val codeMat = getSubMat(pointsWithCenter(CODE_12),pointsWithCenter(CODE_13), img)
+      val alternativesMap = getSubMat(pointsWithCenter(ANSWER_42), pointsWithCenter(ANSWER_45), img)
+      val codeContours = findContoursOperationOpt(
+        thresholdOperation(codeMat),
+        CODE
+      )
+      val alternativesContours = findContoursOperationOpt(
+        thresholdOperation(alternativesMap),
+        ANSWER
+      )
+
+      val codeResult = codeContours.map(getCodeofMatrix)
+      val alternativesResult = alternativesContours.map(getAnswersofMatrix)
+
+      (codeResult, alternativesResult) match {
+        case (Some(code), Some(alternatives)) =>
+          Some(Exam(code, alternatives))
+        case (None, Some(_)) =>
+          println(s"impossible to qualify code")
+          None
+        case (Some(_), None) =>
+          println(s"impossible to qualify alternatives")
+          None
+        case (None,None) =>
+          println(s"impossible to qualify code and alternatives")
+          None
+      }
+
+    } else None
+  }
+
 
   def calificateTemplate(grayMat: Mat): Either[TransformError,(List[Answer], List[Answer])] = {
     val dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_4X4_50)
@@ -398,7 +554,7 @@ object Algorithm {
           case Success(value) if value == 1 => env(group.indexOf(1))
           case _ => 'x'
         }
-      } else 'x'
+      } else 'y'
     }
 
     matrix.par.foldLeft((List.empty[Answer],1)) { (acc, value) =>

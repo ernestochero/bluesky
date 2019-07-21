@@ -5,6 +5,8 @@ import java.awt.event._
 import org.opencv.core.Core
 import javax.swing._
 import javax.swing.border.EmptyBorder
+import Algorithm._
+import scala.util.{Failure, Success}
 object ViewMain {
 
   class AlgorithmFrame extends JFrame("AlgorithmBachelorThesis\u2122") {
@@ -168,6 +170,45 @@ object ViewMain {
     System.loadLibrary(Core.NATIVE_LIBRARY_NAME)
     println(s"Welcome to OpenCv ${Core.VERSION}")
     frame.repaint()
+  }
+
+}
+
+object execute {
+  def main(args: Array[String]): Unit = {
+    System.loadLibrary(Core.NATIVE_LIBRARY_NAME)
+    if(args.length == 2) {
+      val bufferedImagePattern = Util.loadFileImage(args(0))
+      bufferedImagePattern match {
+        case Some(bufferedImage) =>
+          // here start the magic
+          val matImage = bufferedImageToMat(bufferedImage)
+          val warpPerspective = warpPerspectiveOperationOpt(matImage)
+          val result = warpPerspective.flatMap(qualifyTemplateOpt)
+          val resultStr = result.map(exam => {
+            (
+              processResult(exam.code),
+              processResult(exam.alternatives)
+            )
+          })
+
+          resultStr.foreach{
+            case (codeStr, alternativesStr) =>
+              println(s"code : $codeStr with alternatives $alternativesStr")
+          }
+
+        case None =>
+          println("incorrect path")
+      }
+
+    } else {
+      println("incorrect params")
+    }
+
+  }
+
+  def processResult(result: scala.collection.immutable.List[Answer]): String = {
+    result.map(_.value).mkString("")
   }
 
 }

@@ -80,12 +80,11 @@ class PhotoCanvas extends JComponent {
 
     def showsValuesRecognize(exam:(List[Answer],List[Answer])): Unit = {
       val (code, alternatives) = exam
-      println(code.map(_.value).mkString(""))
-      alternatives.foreach(a => println(s"${a.value}"))
+      println(s"${code.map(_.value).mkString("")} : ${alternatives.map(_.value).mkString(",")}")
     }
     // that's a bad pattern but I just do for test purpose
-    //showsValuesRecognize(exam)
     exams.map(exam => {
+      showsValuesRecognize(exam)
       f(exam,pattern)
     })
   }
