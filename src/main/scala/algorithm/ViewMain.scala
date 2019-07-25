@@ -1,11 +1,13 @@
 package algorithm
 import java.awt._
 import java.awt.event._
+import java.awt.image.BufferedImage
 
 import org.opencv.core.Core
 import javax.swing._
 import javax.swing.border.EmptyBorder
 import Algorithm._
+
 import scala.util.{Failure, Success}
 object ViewMain {
 
@@ -177,29 +179,22 @@ object ViewMain {
 object execute {
   def main(args: Array[String]): Unit = {
     System.loadLibrary(Core.NATIVE_LIBRARY_NAME)
+    val t0 = System.nanoTime()
+    var i = 1
+
     if(args.length == 2) {
       val bufferedImagePattern = Util.loadFileImage(args(0))
-      bufferedImagePattern match {
-        case Some(bufferedImage) =>
-          // here start the magic
-          val matImage = bufferedImageToMat(bufferedImage)
-          val warpPerspective = warpPerspectiveOperationOpt(matImage)
-          val result = warpPerspective.flatMap(qualifyTemplateOpt)
-          val resultStr = result.map(exam => {
-            (
-              processResult(exam.code),
-              processResult(exam.alternatives)
-            )
-          })
+      val bufferedImageList = Util.loadFilesImageFromFolder(args(1))
 
-          resultStr.foreach{
-            case (codeStr, alternativesStr) =>
-              println(s"code : $codeStr with alternatives $alternativesStr")
-          }
+      val resultPattern = processBufferedImage(bufferedImagePattern)
+      val resultListExams = processBufferedImageList(bufferedImageList)
 
-        case None =>
-          println("incorrect path")
-      }
+      // showResult(resultPattern)
+      // resultListExams.foreach(showResult)
+      val t1 = System.nanoTime()
+      println("Elapsed time: " + (t1 - t0) + "ns")
+      println(s"Total of Exams Analyzed  = ${resultListExams.length}")
+      println("finished!!!")
 
     } else {
       println("incorrect params")
@@ -209,6 +204,40 @@ object execute {
 
   def processResult(result: scala.collection.immutable.List[Answer]): String = {
     result.map(_.value).mkString("")
+  }
+
+  def showResult(result:Option[Exam]): Unit = {
+    val resultStr = result.map(exam => {
+      (
+        processResult(exam.code),
+        processResult(exam.alternatives)
+      )
+    })
+    resultStr.foreach{
+      case (codeStr, alternativesStr) =>
+        println(s"code : $codeStr with alternatives $alternativesStr")
+    }
+  }
+
+  def processBufferedImage(bufferedImageStream: Option[BufferedImage]): Option[Exam] = bufferedImageStream match {
+    case Some(bufferedImage) =>
+      val matImage = bufferedImageToMat(bufferedImage)
+      val warpPerspective = warpPerspectiveOperationOpt(matImage)
+      val result = warpPerspective.flatMap(qualifyTemplateOpt)
+      showResult(result)
+      result
+    case _ =>
+      println("incorrect file path")
+      None
+  }
+
+  def processBufferedImageList(bufferedImageListStream: Option[scala.collection.immutable.List[Option[BufferedImage]]]) =
+    bufferedImageListStream match {
+      case Some(bufferedImageList) =>
+        bufferedImageList.map(processBufferedImage)
+      case _ =>
+        println("incorrect folder path")
+        scala.collection.immutable.List.empty[Option[Exam]]
   }
 
 }

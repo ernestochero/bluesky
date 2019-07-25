@@ -1,11 +1,10 @@
 package algorithm
 
 import java.awt.image.BufferedImage
-import java.io.{FileInputStream, InputStream}
-
+import java.io._
 import javax.imageio.ImageIO
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 object Util {
 
@@ -18,11 +17,28 @@ object Util {
     img
   }
 
-  def loadFileImage(path: String): Option[BufferedImage] = {
-   val fileInputStream = Try {
-       new FileInputStream(path)
+  def createInputStream(path: String): Option[InputStream] = {
+    Try {
+      new FileInputStream(path)
     }.toOption
-    fileInputStream.map(loadImage(_))
+  }
+
+  def loadFileImage(path: String): Option[BufferedImage] = {
+   val fileInputStream = createInputStream(path)
+    fileInputStream.map(loadImage)
+  }
+
+  def loadFilesImageFromFolder(path: String): Option[List[Option[BufferedImage]]] = {
+    val file = new File(path)
+    val folder = if (file.isDirectory) Some(file) else None
+    println(s"### ${folder}")
+    val files = folder.map(_.listFiles().toList)
+    val filesPath = files.map(_.map(_.getPath))
+    val filesInputStream = filesPath.map(_.map( path => {
+      val inputStream = createInputStream(path)
+      inputStream.map(loadImage)
+    }))
+    filesInputStream
   }
 
   def loadScalaImage(stream:InputStream): BufferedImage = {
