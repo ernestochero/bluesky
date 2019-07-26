@@ -28,24 +28,12 @@ object Util {
     fileInputStream.map(loadImage)
   }
 
-  def loadFilesImageFromFolder(path: String): Option[List[Option[BufferedImage]]] = {
+  def getPathsFromFolder(path: String): List[String] = {
     val file = new File(path)
-    val folder = if (file.isDirectory) Some(file) else None
-    println(s"### ${folder}")
-    val files = folder.map(_.listFiles().toList)
-    val filesPath = files.map(_.map(_.getPath))
-    val filesInputStream = filesPath.map(_.map( path => {
-      val inputStream = createInputStream(path)
-      inputStream.map(loadImage)
-    }))
-    filesInputStream
-  }
-
-  def loadScalaImage(stream:InputStream): BufferedImage = {
-    try {
-      loadImage(stream)
-    } finally {
-      stream.close()
+    val directory = if (file.isDirectory) Some(file) else None
+    directory.fold(List.empty[String]) { folder =>
+      val files = folder.listFiles().toList
+      files.map(_.getPath)
     }
   }
 
