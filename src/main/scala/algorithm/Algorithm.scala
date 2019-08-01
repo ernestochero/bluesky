@@ -266,10 +266,10 @@ object Algorithm {
       new Scalar(255, 255, 255),
       -1
     )
+    val totalBlankMax = (Core.countNonZero(mask) * 0.75).toInt
     Core.bitwise_and(closed, closed, mask, mask)
     val total = Core.countNonZero(mask)
-    if (total >= 280) 1
-    else if (total >= 210) 2
+    if (total >= totalBlankMax) 1
     else 0
   }
 
@@ -281,18 +281,29 @@ object Algorithm {
     val contoursList = contours.asScala.filter(filterContour).toList
 
     def process(groupLength: Int): List[List[Int]] = {
-      val result = sortedGroups(contoursList, VERTICALLY)
-        .grouped(groupLength)
-        .map(
-          sortedGroups(_, HORIZONTALLY)
-            .map(bubble => evaluateBubble(bubble, closed))
-        )
+      val result = {
+        if (typeSection == ANSWER) {
+          sortedGroups(contoursList, VERTICALLY)
+            .grouped(groupLength)
+            .map(
+              sortedGroups(_, HORIZONTALLY)
+                .map(bubble => evaluateBubble(bubble, closed))
+            )
+        } else {
+          sortedGroups(contoursList, HORIZONTALLY)
+            .grouped(groupLength)
+            .map(
+              sortedGroups(_, VERTICALLY)
+                .map(bubble => evaluateBubble(bubble, closed))
+            )
+        }
+      }
       result.toList
     }
 
     val (quantity, groupDivide) =
       if (typeSection == ANSWER) (numberContoursOfAnswers, 20)
-      else (numberContoursOfCodes, 7)
+      else (numberContoursOfCodes, 10)
 
     if (contoursList.length == quantity) {
       Some(process(groupDivide))
@@ -350,49 +361,25 @@ object Algorithm {
   }
 
   def getCodeOfMatrix(matrix: List[List[Int]]): List[Answer] = {
-    def f(group: List[Int], answers: List[Answer], number: Int): (List[Answer], Int) =
-      if (answers.isEmpty) {
-        val code = group
-          .foldLeft((answers, 0)) { (acc, value) =>
-            if (value == 0) (acc._1 :+ Answer(acc._2, 'e', CODE), acc._2 + 1)
-            else
-              (acc._1 :+ Answer(acc._2, number.toString.charAt(0), CODE), acc._2 + 1)
-          }
-          ._1
-
-        (code, number + 1)
-
-      } else {
-        val code = answers.foldLeft(List.empty[Answer]) { (acc, answer) =>
-          if ((group(answer.index) != 0 && answer.value != 'e') || (group(
-                answer.index
-              ) == 2 && answer.value == 'e'))
-            acc :+ answer.copy(value = 'x')
-          else if (group(answer.index) == 1 && answer.value == 'e')
-            acc :+ answer.copy(value = number.toString.charAt(0))
-          else acc :+ answer
-        }
-        (code, number + 1)
-      }
-
-    matrix
-      .foldLeft((List.empty[Answer], 0)) { (tuple, group) =>
-        f(group, tuple._1, tuple._2)
-      }
-      ._1
+    def f(group: List[Int]): Char = {
+      val sumMarks = group.sum
+      if (sumMarks == 0) 'y'
+      else if (sumMarks == 1) s"${group.indexOf(1)}".charAt(0)
+      else 'x'
+    }
+    val result = matrix.foldLeft((List.empty[Answer], 0)) { (acc, value) =>
+      (acc._1 :+ Answer(acc._2, f(value), CODE), acc._2 + 1)
+    }
+    result._1.sortBy(_.index)
   }
 
   def getAnswersOfMatrix(matrix: List[List[Int]]): List[Answer] = {
 
     def f(group: List[Int], env: Map[Int, Char]): Char = {
-      val countG =
-        group.groupBy(identity).mapValues(_.length).filterKeys(_ != 0)
-      if (countG.size == 1) {
-        Try(countG(1)) match {
-          case Success(value) if value == 1 => env(group.indexOf(1))
-          case _                            => 'x'
-        }
-      } else 'y'
+      val sumMarks = group.sum
+      if (sumMarks == 0) 'y'
+      else if (sumMarks == 1) env(group.indexOf(1))
+      else 'x'
     }
 
     matrix.par

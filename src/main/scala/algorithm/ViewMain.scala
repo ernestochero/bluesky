@@ -51,8 +51,11 @@ object execute {
 
   def showResultInGroups(code: String, aptitude: ResultExam, knowledge: ResultExam): Unit =
     println(
-      s"code : $code result: ${aptitude.valid}/${aptitude.wrong}-${knowledge.valid}/${knowledge.wrong} "
+      s"${aptitude.valid}/${aptitude.wrong}-${knowledge.valid}/${knowledge.wrong} "
     )
+  /*println(
+      s"code : $code result: ${aptitude.valid}/${aptitude.wrong}-${knowledge.valid}/${knowledge.wrong} "
+    )*/
 
   def showResultFinal(examPatternOpt: Option[Exam], exams: List[Option[Exam]]): Unit =
     examPatternOpt match {
