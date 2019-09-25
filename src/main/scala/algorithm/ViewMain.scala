@@ -96,7 +96,7 @@ object execute {
         None
     }
 
-  def processImagePaths(paths: scala.collection.immutable.List[String]) =
+  def processImagePaths(paths: scala.collection.immutable.List[String]): List[Option[Exam]] =
     if (paths.nonEmpty) {
       paths.map { path =>
         processBufferedImage(Util.loadFileImage(path))
