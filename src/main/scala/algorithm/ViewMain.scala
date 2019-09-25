@@ -1,191 +1,108 @@
 package algorithm
-import java.awt._
-import java.awt.event._
-
+import java.awt.image.BufferedImage
 import org.opencv.core.Core
-import javax.swing._
-import javax.swing.border.EmptyBorder
-object ViewMain {
+import Algorithm._
 
-  class AlgorithmFrame extends JFrame("AlgorithmBachelorThesis\u2122") {
-    val screenSize = Toolkit.getDefaultToolkit.getScreenSize
-    this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
-    this.setLayout(new BorderLayout)
-    /* collocate fullscreen size*/
-    this.setSize(1280,710)
-    this.setLocationRelativeTo(null)
-
-    /* here add menu of application */
-    val mainMenuBar = new JMenuBar()
-    val fileMenu = new JMenu("File")
-    val openMenuItem = new JMenuItem("open...")
-    openMenuItem.addActionListener(new ActionListener {
-      override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        val fc = new JFileChooser("/home/ernesto/Documents/imagesThesis/examScanned/")
-        val result = fc.showOpenDialog(AlgorithmFrame.this)
-        if( result == JFileChooser.APPROVE_OPTION) { canvas.loadFile(fc.getSelectedFile.getPath) }
-        /*
-        * else if (result == JFileChooser.CANCEL_OPTION){
-        }
-        * */
-      }
-    })
-    fileMenu.add(openMenuItem)
-
-    val exitMenuItem = new JMenuItem("Exit")
-    exitMenuItem.addActionListener(new ActionListener {
-      def actionPerformed(e: ActionEvent) {
-        sys.exit(0)
-      }
-    })
-    fileMenu.add(exitMenuItem)
-    mainMenuBar.add(fileMenu)
-
-    val helpMenu = new JMenu("Help")
-    val aboutMenuItem = new JMenuItem("About")
-    aboutMenuItem.addActionListener(new ActionListener {
-      def actionPerformed(e: ActionEvent) {
-        JOptionPane.showMessageDialog(null, "AlgorithmBachelorThesis - Ernesto Chero, 2018")
-      }
-    })
-    helpMenu.add(aboutMenuItem)
-    mainMenuBar.add(helpMenu)
-    setJMenuBar(mainMenuBar)
-
-    /* here add control panel on where we put the operations */
-    val operationsPanel = new JPanel
-    operationsPanel.setSize(new Dimension(operationsPanel.getWidth, operationsPanel.getHeight))
-    operationsPanel.setBorder(BorderFactory.createEtchedBorder(border.EtchedBorder.LOWERED))
-    operationsPanel.setLayout(new BorderLayout)
-    this.add(operationsPanel,BorderLayout.EAST)
-
-    val controls = new JPanel
-    controls.setLayout(new GridLayout(0, 3, 10 , 30))
-    controls.setBorder(new EmptyBorder(10, 10, 10, 10))
-    operationsPanel.add(controls, BorderLayout.NORTH)
-
-
-   /* val controlsBottom = new JPanel
-    controls.setLayout(new GridLayout(2, 1, 10 , 10))
-    controls.setBorder(new EmptyBorder(10, 10, 10, 10))
-    operationsPanel.add(controlsBottom, BorderLayout.SOUTH)
-*/
-    /* here add component to left panel*/
-    // upload exam pattern
-    val uploadPatternLabel = new JLabel("Upload Pattern : ")
-    uploadPatternLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK))
-    controls.add(uploadPatternLabel)
-
-    val uploadPatternButton = new JButton("upload")
-    uploadPatternButton.addActionListener(new ActionListener {
-      override def actionPerformed(e: ActionEvent): Unit = {
-        val fc = new JFileChooser("/home/ernesto/Documents/imagesThesis/examScanned/")
-        if( fc.showOpenDialog(AlgorithmFrame.this) == JFileChooser.APPROVE_OPTION) canvas.uploadPattern(fc.getSelectedFile.getPath)
-        uploadPatternIcon.setText(" successfully ")
-      }
-    })
-    uploadPatternButton.setForeground(Color.BLUE)
-    uploadPatternButton.setToolTipText("exam pattern : It's used to evaluate the others exams")
-    controls.add(uploadPatternButton)
-
-    val uploadPatternIcon = new JLabel(" := empty pattern ")
-    uploadPatternIcon.setBorder(BorderFactory.createLineBorder(Color.BLACK))
-    controls.add(uploadPatternIcon)
-
-
-    // upload exams
-    val uploadExams = new JLabel("Upload Exams : ")
-    uploadExams.setBorder(BorderFactory.createLineBorder(Color.BLACK))
-    controls.add(uploadExams)
-
-    val uploadExamsButton = new JButton("upload")
-    uploadExamsButton.addActionListener(new ActionListener {
-      override def actionPerformed(e: ActionEvent): Unit = {
-        val fc = new JFileChooser("/home/ernesto/Documents/imagesThesis/")
-        fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY)
-        fc.setAcceptAllFileFilterUsed(false)
-        fc.setMultiSelectionEnabled(true)
-        if( fc.showOpenDialog(AlgorithmFrame.this) == JFileChooser.APPROVE_OPTION) {
-          val paths = fc.getSelectedFile.listFiles().map(_.getPath)
-          canvas.uploadExams(paths)
-          uploadExamsIcon.setText(s" ${paths.length} Exams Uploaded")
-        }
-      }
-    })
-    uploadExamsButton.setForeground(Color.BLUE)
-    controls.add(uploadExamsButton)
-
-
-    val uploadExamsIcon = new JLabel(" 0 Exams ")
-    uploadExamsIcon.setBorder(new EmptyBorder(5,5,5,5))
-    controls.add(uploadExamsIcon)
-
-    // results
-    val line1 = new JLabel(" ------------------ ")
-    controls.add(line1)
-
-    val qualifyButton = new JButton("qualify")
-    qualifyButton.addActionListener(e => canvas.applyQualify())
-    controls.add(qualifyButton)
-
-    val line2 = new JLabel(" ------------------ ")
-    controls.add(line2)
-
-    val rotateOpButton = new JButton("apply test operations")
-    rotateOpButton.addActionListener(new ActionListener {
-      override def actionPerformed(actionEvent: ActionEvent): Unit = {
-        val fc = new JFileChooser("/home/ernesto/Documents/imagesThesis/")
-        if( fc.showOpenDialog(AlgorithmFrame.this) == JFileChooser.APPROVE_OPTION) canvas.testAlgorithmImages(fc.getSelectedFile.getPath)
-      }
-    })
-    controls.add(rotateOpButton)
-
-/*    val qualifyOpButton = new JButton("apply qualify")
-    qualifyOpButton.addActionListener(new ActionListener {
-      override def actionPerformed(e: ActionEvent): Unit = {
-        canvas.applyGrayScaleOperation()
-      }
-    })
-    controls.add(qualifyOpButton)*/
-
-
-
-    val canvas = new PhotoCanvas
-    val scrollPane = new JScrollPane(canvas)
-    this.add(scrollPane,BorderLayout.CENTER)
-    setVisible(true)
-  }
-
-  try
-    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
-  catch {
-    case _: Exception => println("Cannot set look and feel, using the default one")
-  }
-
-  val frame = new AlgorithmFrame
+object execute {
+  case class ResultExam(valid: Int, wrong: Int)
 
   def main(args: Array[String]): Unit = {
     System.loadLibrary(Core.NATIVE_LIBRARY_NAME)
-    println(s"Welcome to OpenCv ${Core.VERSION}")
-    frame.repaint()
+    if (args.length == 2) {
+      val t0                   = System.nanoTime()
+      val bufferedImagePattern = Util.loadFileImage(args(0))
+      val pathsFromFolder      = Util.getPathsFromFolder(args(1))
+
+      val resultPattern   = processBufferedImage(bufferedImagePattern)
+      val resultListExams = processImagePaths(pathsFromFolder)
+
+      showResultFinal(resultPattern, resultListExams)
+
+      val t1 = System.nanoTime()
+      println("Elapsed time: " + (t1 - t0) + "ns")
+      println(s"Total of Exams Analyzed  = ${resultListExams.length}")
+
+    } else {
+      println("incorrect params")
+    }
   }
 
-}
+  def compare(pc: Char, ec: Char): Int =
+    if (ec == 'y') 0
+    else if (pc == ec) 1
+    else 2
 
-
-/*
-*
-* import org.opencv.core.{Core, CvType, Mat, Scalar}
-
-object Main extends App {
-
-  override def main(args:Array[String]) = {
-    System.loadLibrary(Core.NATIVE_LIBRARY_NAME)
-    println(s"Welcome to OpenCv ${Core.VERSION}")
-    val mat = Mat.eye(3, 3, CvType.CV_8UC1)
-    println(mat.`type`())
+  def evaluate(result: List[Int]): ResultExam = {
+    val validCount = result.count(_ == 1)
+    val wrongCount = result.count(_ == 2)
+    ResultExam(validCount, wrongCount)
   }
 
+  def compareAlternatives(pattern: Exam, exam: Exam): (ResultExam, ResultExam) = {
+    val zip       = pattern.alternatives.map(_.value).zip(exam.alternatives.map(_.value))
+    val result    = zip.map(z => compare(z._1, z._2))
+    val aptitude  = evaluate(result.take(30))
+    val knowledge = evaluate(result.takeRight(70))
+    (aptitude, knowledge)
+  }
+
+  def processResult(result: scala.collection.immutable.List[Answer]): String =
+    result.map(_.value).mkString("")
+
+  def showResultInGroups(code: String, aptitude: ResultExam, knowledge: ResultExam): Unit =
+    println(
+      s"${aptitude.valid}/${aptitude.wrong}-${knowledge.valid}/${knowledge.wrong} "
+    )
+  /*println(
+      s"code : $code result: ${aptitude.valid}/${aptitude.wrong}-${knowledge.valid}/${knowledge.wrong} "
+    )*/
+
+  def showResultFinal(examPatternOpt: Option[Exam], exams: List[Option[Exam]]): Unit =
+    examPatternOpt match {
+      case Some(pattern) =>
+        exams.foreach(examOpt => {
+          examOpt match {
+            case Some(exam) =>
+              val alternativesCompared = compareAlternatives(pattern, exam)
+              showResultInGroups(processResult(exam.code),
+                                 alternativesCompared._1,
+                                 alternativesCompared._2)
+            case None =>
+              println("Impossible to Process Exam")
+          }
+        })
+      case None =>
+        println("Impossible to Process Exam Pattern")
+
+    }
+
+  def showResult(result: Option[Exam]): Unit =
+    result.foreach { exam =>
+      println(
+        s"code : ${processResult(exam.code)} with alternatives ${processResult(exam.alternatives)}"
+      )
+    }
+
+  def processBufferedImage(bufferedImageStream: Option[BufferedImage]): Option[Exam] =
+    bufferedImageStream match {
+      case Some(bufferedImage) =>
+        val matImage        = bufferedImageToMat(bufferedImage)
+        val warpPerspective = warpPerspectiveOperationOpt(matImage)
+        val result          = warpPerspective.flatMap(qualifyTemplateOpt)
+        showResult(result)
+        result
+      case _ =>
+        println("incorrect file path")
+        None
+    }
+
+  def processImagePaths(paths: scala.collection.immutable.List[String]) =
+    if (paths.nonEmpty) {
+      paths.map { path =>
+        processBufferedImage(Util.loadFileImage(path))
+      }
+    } else {
+      println("incorrect folder path")
+      scala.collection.immutable.List.empty[Option[Exam]]
+    }
 }
-*
-* */
