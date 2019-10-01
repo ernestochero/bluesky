@@ -1,3 +1,4 @@
+/*
 package algorithm
 
 import java.awt.image.BufferedImage
@@ -6,6 +7,7 @@ import java.io.InputStream
 import org.opencv.core.{ Mat, MatOfPoint, MatOfPoint2f }
 import scalaz._
 import Scalaz._
+import scalaz.zio.{ Ref, ZIO }
 
 final case class Answer(index: Int, value: Char, category: String)
 final case class Exam(code: List[Answer], alternatives: List[Answer])
@@ -84,3 +86,4 @@ final case class CalExamsModule[F[_]: Monad](I: Image[F], C: Calificate[F]) exte
 
   override def stop: F[WorldView] = ???
 }
+*/
