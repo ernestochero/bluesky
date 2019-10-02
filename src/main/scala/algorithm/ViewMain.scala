@@ -3,7 +3,6 @@ import java.awt.image.BufferedImage
 
 import org.opencv.core.Core
 import ZIOApp._
-import Algorithm._
 import scalaz.zio.{ DefaultRuntime, Ref, ZIO, console }
 import Utils._
 import Calificate._
@@ -65,29 +64,12 @@ object execute {
   def processResult(result: scala.collection.immutable.List[Answer]): String =
     result.map(_.value).mkString("")
 
-  def showResultInGroups(code: String, aptitude: ResultExam, knowledge: ResultExam) =
+  def showResultInGroups(code: String,
+                         aptitude: ResultExam,
+                         knowledge: ResultExam): ZIO[Writer[String], Nothing, Unit] =
     log(
       s"exam[${code}] => ${aptitude.valid}/${aptitude.wrong}-${knowledge.valid}/${knowledge.wrong} "
     )
-
-  def showResultFinal(examPatternOpt: Option[Exam], exams: List[Option[Exam]]): Unit =
-    examPatternOpt match {
-      case Some(pattern) =>
-        exams.foreach(examOpt => {
-          examOpt match {
-            case Some(exam) =>
-              val alternativesCompared = compareAlternatives(pattern, exam)
-              showResultInGroups(processResult(exam.code),
-                                 alternativesCompared._1,
-                                 alternativesCompared._2)
-            case None =>
-              println("Impossible to Process Exam")
-          }
-        })
-      case None =>
-        println("Impossible to Process Exam Pattern")
-
-    }
 
   def showResulFinalZIO(pattern: Exam, exams: List[Exam]): ZIO[Writer[String], Nothing, Unit] =
     for {
