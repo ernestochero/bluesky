@@ -13,9 +13,6 @@ import org.opencv.aruco.Aruco
 import org.opencv.core
 import scalaz.zio.{ Ref, ZIO }
 
-import scala.util.Try
-import scala.util.Success
-
 case class Answer(index: Int, value: Char, category: String)
 case class Exam(code: List[Answer], alternatives: List[Answer])
 case class SizeM(width: Double, height: Double)
@@ -38,157 +35,134 @@ object ZIOApp {
     ZIO.accessM[Writer[W]](_.writer.set(Vector()))
 }
 
-object Image {
-  def bufferedImageToMat(bufferedImage: BufferedImage): Mat = {
-    val width  = bufferedImage.getWidth()
-    val height = bufferedImage.getHeight()
-    val mat = bufferedImage.getType match {
-      case BufferedImage.TYPE_INT_RGB =>
-        val out = new Mat(bufferedImage.getHeight, bufferedImage.getWidth, CvType.CV_8UC3)
-        val data =
-          new Array[Byte](width * height * out.elemSize.asInstanceOf[Int])
-        val dataBuff = bufferedImage.getRGB(0, 0, width, height, null, 0, width)
-        for ((x, i) <- dataBuff.view.zipWithIndex) {
-          data(i * 3) = ((x >> 16) & 0xFF).asInstanceOf[Byte]
-          data(i * 3 + 1) = ((x >> 8) & 0xFF).asInstanceOf[Byte]
-          data(i * 3 + 2) = ((x >> 0) & 0xFF).asInstanceOf[Byte]
-        }
-        out.put(0, 0, data)
-        out
-      case _ =>
-        val out = new Mat(bufferedImage.getHeight, bufferedImage.getWidth, CvType.CV_8UC1)
-        val data =
-          new Array[Byte](width * height * out.elemSize.asInstanceOf[Int])
-        val dataBuff = bufferedImage.getRGB(0, 0, width, height, null, 0, width)
-        for ((x, i) <- dataBuff.view.zipWithIndex) {
-          data(i) = ((0.21 * ((x >> 16) & 0xFF)) +
-          (0.71 * ((x >> 8) & 0xFF)) +
-          (0.07 * ((x >> 0) & 0xFF)))
-            .asInstanceOf[Byte]
-        }
-        out.put(0, 0, data)
-        out
-    }
-    mat
-  }
+object Constants {
+  val CODE                    = "code"
+  val ANSWER                  = "answer"
+  val numberContoursOfCodes   = 70
+  val numberContoursOfAnswers = 500
 
-  def matToBufferedImage(mat: Mat): BufferedImage = {
-    val width  = mat.cols()
-    val height = mat.rows()
-    val data =
-      new Array[Byte](mat.rows * mat.cols * mat.elemSize.asInstanceOf[Int])
-    mat.get(0, 0, data)
-    val _type = mat.channels match {
-      case 1 => BufferedImage.TYPE_BYTE_GRAY
-      case _ => BufferedImage.TYPE_3BYTE_BGR
-    }
-    val bufferedImage = new BufferedImage(width, height, _type)
-    bufferedImage.getRaster.setDataElements(0, 0, width, height, data)
-    bufferedImage
-  }
-
-  def grayScaleOperation(mat: Mat): Mat = {
-    val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
-    Imgproc.cvtColor(mat, out, Imgproc.COLOR_RGB2GRAY)
-    out
-  }
-  // 165
-  def thresholdOperation(mat: Mat): Mat = {
-    val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
-    Imgproc.threshold(mat, out, 170, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C)
-    out
-  }
-
-  def dilatationOperation(mat: Mat): Mat = {
-    val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
-    Imgproc.dilate(
-      mat,
-      out,
-      Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(2, 2))
-    )
-    out
-  }
-
-  def erodeOperation(mat: Mat): Mat = {
-    val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
-    Imgproc.erode(
-      mat,
-      out,
-      Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(2, 2))
-    )
-    out
-  }
-
-  def gaussianBlurOperation(mat: Mat): Mat = {
-    val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
-    Imgproc.GaussianBlur(mat, out, new Size(5, 5), 0)
-    out
-  }
-
-  def cannyOperation(mat: Mat): Mat = {
-    val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
-    Imgproc.Canny(mat, out, 75, 200)
-    out
-  }
-
-  def openOperation(mat: Mat): Mat = {
-    val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
-    Imgproc.morphologyEx(
-      mat,
-      out,
-      Imgproc.MORPH_OPEN,
-      Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(2, 2))
-    )
-    out
-  }
-
-  def closeOperation(mat: Mat): Mat = {
-    val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
-    Imgproc.morphologyEx(
-      mat,
-      out,
-      Imgproc.MORPH_CLOSE,
-      Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(4, 4))
-    )
-    out
-  }
+  val HORIZONTALLY = 1
+  val VERTICALLY   = 2
 }
 
-trait ArrayLike2f[T] {
-  def sort(arr: T, ref: Point): T
-  def getSizeOfSquad(arr: T): Size
-}
+object Utils {
 
-object ArrayLike {
-  def distance(p1: Point, p2: Point): Double = {
-    val d1 = math.pow(p1.x - p2.x, 2)
-    val d2 = math.pow(p1.y - p2.y, 2)
-    math.sqrt(d1 + d2)
+  implicit final class BufferedImageOps(private val bufferedImage: BufferedImage) extends AnyVal {
+    def toMat: Mat = {
+      val width  = bufferedImage.getWidth()
+      val height = bufferedImage.getHeight()
+      val mat = bufferedImage.getType match {
+        case BufferedImage.TYPE_INT_RGB =>
+          val out = new Mat(bufferedImage.getHeight, bufferedImage.getWidth, CvType.CV_8UC3)
+          val data =
+            new Array[Byte](width * height * out.elemSize.asInstanceOf[Int])
+          val dataBuff = bufferedImage.getRGB(0, 0, width, height, null, 0, width)
+          for ((x, i) <- dataBuff.view.zipWithIndex) {
+            data(i * 3) = ((x >> 16) & 0xFF).asInstanceOf[Byte]
+            data(i * 3 + 1) = ((x >> 8) & 0xFF).asInstanceOf[Byte]
+            data(i * 3 + 2) = ((x >> 0) & 0xFF).asInstanceOf[Byte]
+          }
+          out.put(0, 0, data)
+          out
+        case _ =>
+          val out = new Mat(bufferedImage.getHeight, bufferedImage.getWidth, CvType.CV_8UC1)
+          val data =
+            new Array[Byte](width * height * out.elemSize.asInstanceOf[Int])
+          val dataBuff = bufferedImage.getRGB(0, 0, width, height, null, 0, width)
+          for ((x, i) <- dataBuff.view.zipWithIndex) {
+            data(i) = ((0.21 * ((x >> 16) & 0xFF)) +
+            (0.71 * ((x >> 8) & 0xFF)) +
+            (0.07 * ((x >> 0) & 0xFF)))
+              .asInstanceOf[Byte]
+          }
+          out.put(0, 0, data)
+          out
+      }
+      mat
+    }
   }
 
-  // _ < _
-  def sortPointsWithReference(point1: Point, point2: Point, pointReference: Point): Boolean = {
-    val distance1 = distance(point1, pointReference)
-    val distance2 = distance(point2, pointReference)
-    distance1 < distance2
-  }
-
-  implicit object ArrayLikeMatOfPoint2f extends ArrayLike2f[MatOfPoint2f] {
-    def sort(points: MatOfPoint2f, ref: Point): MatOfPoint2f = {
-      val pointsSorted    = points.toArray.sortWith((p1, p2) => sortPointsWithReference(p1, p2, ref))
-      val subPointsSorted = Array(pointsSorted(1), pointsSorted(2)).sortWith(_.x < _.x)
-      val x1y1            = pointsSorted(0)
-      val x3y3            = pointsSorted(3)
-      val x4y4            = subPointsSorted(0)
-      val x2y2            = subPointsSorted(1)
-      new MatOfPoint2f(x1y1, x2y2, x3y3, x4y4)
+  implicit final class MatOps(private val mat: Mat) extends AnyVal {
+    def toBufferedImage: BufferedImage = {
+      val width  = mat.cols()
+      val height = mat.rows()
+      val data =
+        new Array[Byte](mat.rows * mat.cols * mat.elemSize.asInstanceOf[Int])
+      mat.get(0, 0, data)
+      val _type = mat.channels match {
+        case 1 => BufferedImage.TYPE_BYTE_GRAY
+        case _ => BufferedImage.TYPE_3BYTE_BGR
+      }
+      val bufferedImage = new BufferedImage(width, height, _type)
+      bufferedImage.getRaster.setDataElements(0, 0, width, height, data)
+      bufferedImage
     }
 
-    def getSizeOfSquad(points: MatOfPoint2f): Size = {
-      val arr    = points.toArray
-      val width  = ArrayLike.distance(arr(0), arr(1))
-      val height = ArrayLike.distance(arr(0), arr(3))
-      new Size(width, height)
+    def grayScaleOperation: Mat = {
+      val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
+      Imgproc.cvtColor(mat, out, Imgproc.COLOR_RGB2GRAY)
+      out
+    }
+
+    // 165
+    def thresholdOperation: Mat = {
+      val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
+      Imgproc.threshold(mat, out, 170, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C)
+      out
+    }
+
+    def dilatationOperation: Mat = {
+      val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
+      Imgproc.dilate(
+        mat,
+        out,
+        Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(2, 2))
+      )
+      out
+    }
+
+    def erodeOperation: Mat = {
+      val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
+      Imgproc.erode(
+        mat,
+        out,
+        Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(2, 2))
+      )
+      out
+    }
+
+    def gaussianBlurOperation: Mat = {
+      val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
+      Imgproc.GaussianBlur(mat, out, new Size(5, 5), 0)
+      out
+    }
+
+    def cannyOperation: Mat = {
+      val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
+      Imgproc.Canny(mat, out, 75, 200)
+      out
+    }
+
+    def openOperation: Mat = {
+      val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
+      Imgproc.morphologyEx(
+        mat,
+        out,
+        Imgproc.MORPH_OPEN,
+        Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(2, 2))
+      )
+      out
+    }
+
+    def closeOperation: Mat = {
+      val out = new Mat(mat.rows(), mat.cols(), CvType.CV_8UC1)
+      Imgproc.morphologyEx(
+        mat,
+        out,
+        Imgproc.MORPH_CLOSE,
+        Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(4, 4))
+      )
+      out
     }
   }
 }
@@ -289,38 +263,79 @@ object Helpers {
       .sortBy(_.index)
   }
 
-}
+  def getSizeOfQuad(points: MatOfPoint2f): (Double, Double) = {
+    val arr    = points.toArray
+    val width  = distance(arr(0), arr(1))
+    val height = distance(arr(0), arr(3))
+    (width, height)
+  }
 
-object Constants {
-  val CODE                    = "code"
-  val ANSWER                  = "answer"
-  val numberContoursOfCodes   = 70
-  val numberContoursOfAnswers = 500
+  def sortMatOfPoint(mop1: MatOfPoint, mop2: MatOfPoint): Boolean = {
+    val contourArea1 = Imgproc.contourArea(mop1.t())
+    val contourArea2 = Imgproc.contourArea(mop2.t())
+    contourArea1 > contourArea2
+  }
 
-  val HORIZONTALLY = 1
-  val VERTICALLY   = 2
+  def sortPoints(points: MatOfPoint2f, refer: Point): MatOfPoint2f = {
+    val pointsSorted = points.toArray.sortWith((point1, point2) => {
+      sortPointsWithReference(point1, point2, refer)
+    })
+
+    val subPointsSorted =
+      Array(pointsSorted(1), pointsSorted(2)).sortWith(_.x < _.x)
+
+    val x1y1 = pointsSorted(0)
+    val x3y3 = pointsSorted(3)
+    val x4y4 = subPointsSorted(0)
+    val x2y2 = subPointsSorted(1)
+
+    new MatOfPoint2f(x1y1, x2y2, x3y3, x4y4)
+  }
+
+  // _ < _
+  def sortPointsWithReference(point1: Point, point2: Point, pointReference: Point): Boolean = {
+    val distance1 = distance(point1, pointReference)
+    val distance2 = distance(point2, pointReference)
+    distance1 < distance2
+  }
+
+  def distance(p1: Point, p2: Point): Double = {
+    val d1 = math.pow(p1.x - p2.x, 2)
+    val d2 = math.pow(p1.y - p2.y, 2)
+    math.sqrt(d1 + d2)
+  }
+
+  def findSquare(list: List[MatOfPoint]): Option[MatOfPoint2f] = {
+    var square: Option[MatOfPoint2f] = None
+    breakable {
+      for (c <- list) {
+        val curve  = new core.MatOfPoint2f()
+        val approx = new core.MatOfPoint2f()
+        c.convertTo(curve, CvType.CV_32FC2)
+        val peri = Imgproc.arcLength(curve, true)
+        Imgproc.approxPolyDP(curve, approx, 0.02 * peri, true)
+        if (approx.toList.size() == 4) {
+          square = Some(approx)
+          break()
+        }
+      }
+    }
+    square
+  }
+
 }
 
 object Calificate {
   import ZIOApp._
   import Helpers._
-  import Image._
+  import Utils._
   import Constants._
-  def sortPoints(points: MatOfPoint2f, refer: Point)(
-    implicit ev: ArrayLike2f[MatOfPoint2f]
-  ): MyZIO[Log, Error, MatOfPoint2f] = ZIO.succeed(ev.sort(points, refer))
-
   def calificateExam(corners: java.util.List[Mat],
                      ids: Mat,
                      img: Mat): ZIO[Writer[String], String, Exam] =
     if (!corners.isEmpty && corners.size() == 4) {
-      val pointsWithCenter = getCornersTuple(ids, corners.asScala.toList)
-        .flatMap(markWithCode => {
-          Map(markWithCode.id -> getCenterSquare(markWithCode.id, markWithCode.mat))
-        })
-        .toMap
       for {
-        _ <- log("...")
+        _ <- log("calificating exam")
         pointsWithCenter = getCornersTuple(ids, corners.asScala.toList)
           .flatMap(markWithCode => {
             Map(markWithCode.id -> getCenterSquare(markWithCode.id, markWithCode.mat))
@@ -328,8 +343,8 @@ object Calificate {
           .toMap
         codeMat         = getSubMat(pointsWithCenter(CODE_12), pointsWithCenter(CODE_13), img)
         alternativesMap = getSubMat(pointsWithCenter(ANSWER_42), pointsWithCenter(ANSWER_45), img)
-        codeContours         <- findContoursOperation(thresholdOperation(codeMat), CODE)
-        alternativesContours <- findContoursOperation(thresholdOperation(alternativesMap), ANSWER)
+        codeContours         <- findContoursOperation(codeMat.thresholdOperation, CODE)
+        alternativesContours <- findContoursOperation(alternativesMap.thresholdOperation, ANSWER)
         codeResult         = getCodeOfMatrix(codeContours)
         alternativesResult = getAnswersOfMatrix(alternativesContours)
       } yield Exam(codeResult, alternativesResult)
@@ -369,10 +384,10 @@ object Calificate {
   def findContoursOperation(img: Mat,
                             typeSection: String): ZIO[Writer[String], String, List[List[Int]]] =
     for {
-      _ <- log("Starting contours operation")
+      _ <- log(s"Starting contours operation in $typeSection")
       out      = new Mat(img.rows(), img.cols(), CvType.CV_8UC3)
       contours = ListBuffer(List[MatOfPoint](): _*).asJava
-      closed   = closeOperation(img)
+      closed   = img.closeOperation
       _ = Imgproc.findContours(closed,
                                contours,
                                out,
@@ -397,6 +412,39 @@ object Calificate {
       _          = Aruco.detectMarkers(img, dictionary, corners, ids)
       exam <- calificateExam(corners, ids, img)
     } yield exam
+
+  def warpPerspectiveOperation(mat: Mat): ZIO[Writer[String], String, Mat] = {
+    val gray      = mat.grayScaleOperation
+    val blurred   = gray.gaussianBlurOperation
+    val edged     = blurred.cannyOperation
+    val dilated   = edged.dilatationOperation
+    val edgedCopy = new Mat(edged.rows(), edged.cols(), edged.`type`())
+    edged.copyTo(edgedCopy)
+    val contours = ListBuffer(List[MatOfPoint](): _*).asJava
+    Imgproc.findContours(dilated,
+                         contours,
+                         edgedCopy,
+                         Imgproc.RETR_EXTERNAL,
+                         Imgproc.CHAIN_APPROX_SIMPLE)
+    for {
+      squareFound <- if (!contours.isEmpty)
+        ZIO.succeed(findSquare(contours.asScala.sortWith(sortMatOfPoint).toList))
+      else log("failed") *> ZIO.fail("contours empty")
+      square <- ZIO.fromOption(squareFound).mapError(_ => "squareFound is None")
+      pointsSorted = sortPoints(square, new Point(0, 0))
+      measures     = getSizeOfQuad(pointsSorted)
+      destImage    = new Mat(measures._2.toInt, measures._1.toInt, mat.`type`())
+      dst_mat = new MatOfPoint2f(
+        new Point(0, 0),
+        new Point(destImage.width() - 1, 0),
+        new Point(destImage.width() - 1, destImage.height() - 1),
+        new Point(0, destImage.height() - 1)
+      )
+      transform        = Imgproc.getPerspectiveTransform(pointsSorted, dst_mat)
+      _                = Imgproc.warpPerspective(gray, destImage, transform, destImage.size())
+      destImageDilated = destImage.dilatationOperation
+    } yield destImageDilated
+  }
 }
 
 object Algorithm {
