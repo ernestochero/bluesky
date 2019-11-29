@@ -12,12 +12,12 @@ object QualifyModule {
   final case class ResultExam(valid: Int, wrong: Int)
   case class Qualify() {
 
-    def compare(pc: Char, ec: Char): Int =
+    private def compare(pc: Char, ec: Char): Int =
       if (ec == 'y') 0
       else if (pc == ec) 1
       else 2
 
-    def evaluate(result: List[Int]): ResultExam = {
+    private def evaluate(result: List[Int]): ResultExam = {
       val validCount = result.count(_ == 1)
       val wrongCount = result.count(_ == 2)
       ResultExam(validCount, wrongCount)

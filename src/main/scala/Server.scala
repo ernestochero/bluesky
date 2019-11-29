@@ -16,8 +16,9 @@ object Server extends App {
     Unit
   ] =
     for {
-      configuration   <- ConfigurationModule.factory.configuration
-      _               <- LoggingModule.factory.info(s"Starting Program ${configuration.appName}")
+      configuration <- ConfigurationModule.factory.configuration
+      _             <- LoggingModule.factory.info(s"Starting Program ${configuration.appName}")
+      t0 = System.nanoTime()
       imageUtilModule <- ImageUtilModule.factory.imageUtil
       bufferedPattern <- imageUtilModule.getBufferedImage(configuration.examPath.pattern)
       pathsFromFolder = getPathsFromFolder(configuration.examPath.group)
@@ -38,6 +39,9 @@ object Server extends App {
         )
       }
       _ <- qualifyModule.showResultFinal(resultPattern, resultGroup)
+      t1 = System.nanoTime()
+      _ <- LoggingModule.factory.info(s"Elapsed time: ${t1 - t0} ns")
+      _ <- LoggingModule.factory.info(s"Total of Exams Analyzed = ${resultGroup.length}")
     } yield ()
 
   override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] = {
