@@ -1,8 +1,8 @@
 package modules
 import java.awt.image.BufferedImage
-import java.io.{ File, FileInputStream, InputStream }
+import java.io.{ File, FileInputStream, IOException, InputStream }
 
-import zio.{ Task, UIO, URIO, ZIO }
+import zio.{ Task, UIO, ZIO }
 import ImageUtilModule._
 import javax.imageio.ImageIO
 trait ImageUtilModule {
@@ -20,12 +20,11 @@ object ImageUtilModule {
       for (x <- 0 until width; y <- 0 until height) img.setRGB(x, y, bufferedImage.getRGB(x, y))
       ZIO.succeed(img)
     }
+    private def openStream(path: String): ZIO[Any, IOException, FileInputStream] =
+      Task.effect(new FileInputStream(new File(path))).refineToOrDie[IOException]
 
-    def getBufferedImage(path: String): URIO[Any, BufferedImage] =
-      Task
-        .effect(new FileInputStream(new File(path)))
-        .bracket(closeStream)(loadImage)
-        .orDie
+    def getBufferedImage(path: String): ZIO[Any, Throwable, BufferedImage] =
+      openStream(path).bracket(closeStream)(loadImage)
   }
   trait Service[R] {
     def imageUtil: ZIO[R, Throwable, ImageUtil]
