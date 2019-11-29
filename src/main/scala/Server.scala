@@ -1,7 +1,7 @@
 import modules.{ ConfigurationModule, ImageUtilModule, LoggingModule, QualifyModule }
 import zio.ZIO
-import zio.console.{ Console, putStrLn }
-import modules.Logger.logger
+import zio.console.Console
+import modules.SkyBlueLogger.logger
 import zio._
 import commons.ZIOHelpers._
 import zio.internal.PlatformLive

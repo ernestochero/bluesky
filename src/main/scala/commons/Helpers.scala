@@ -1,6 +1,4 @@
 package commons
-
-import commons.Constants._
 import scala.collection.JavaConverters._
 import models._
 import org.opencv.core
@@ -89,7 +87,7 @@ object Helpers {
       else 'x'
     }
 
-    matrix.par
+    matrix
       .foldLeft((List.empty[Answer], 1)) { (acc, value) =>
         val env   = Map(0 -> 'a', 1 -> 'b', 2 -> 'c', 3 -> 'd', 4 -> 'e')
         val chars = value.grouped(5).map(f(_, env)).toArray

@@ -3,7 +3,7 @@ import zio.ZIO
 import QualifyModule._
 import models.{ Answer, Exam }
 import org.opencv.core.Mat
-import modules.Logger.logger
+import modules.SkyBlueLogger.logger
 trait QualifyModule {
   val qualifyModule: Service[Any]
 }

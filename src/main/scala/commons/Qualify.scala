@@ -9,7 +9,7 @@ import zio.ZIO
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.JavaConverters._
-import modules.Logger.logger
+import modules.SkyBlueLogger.logger
 import modules.LoggingModule
 import models._
 import org.opencv.aruco.Aruco
