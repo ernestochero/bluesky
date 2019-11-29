@@ -1,12 +1,13 @@
-package algorithm
+package commons
 
 import java.awt.image.BufferedImage
-import java.io._
+import java.io.{ File, FileInputStream, InputStream }
+
 import javax.imageio.ImageIO
 
 import scala.util.Try
 
-object Util {
+object ImageUtil {
 
   def loadImage(inputStream: InputStream): BufferedImage = {
     val bufferedImage = ImageIO.read(inputStream)

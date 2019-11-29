@@ -10,7 +10,8 @@ trait ConfigurationModule {
 
 object ConfigurationModule {
   case class ConfigurationError(message: String) extends RuntimeException(message)
-  case class Configuration(appName: String)
+  case class ExamPath(pattern: String, group: String)
+  case class Configuration(appName: String, examPath: ExamPath)
   trait Service[R] {
     def configuration: ZIO[R, Throwable, Configuration]
   }

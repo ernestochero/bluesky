@@ -6,6 +6,7 @@ import ZIOApp._
 import scalaz.zio.{ DefaultRuntime, Ref, ZIO, console }
 import Utils._
 import Calificate._
+import commons.ImageUtil
 import scalaz.zio.console.Console
 
 case class ResultExam(valid: Int, wrong: Int)
@@ -18,8 +19,8 @@ object execute {
       val program = for {
         _ <- log("initiating program to calificate exams")
         t0                   = System.nanoTime()
-        bufferedImagePattern = Util.loadFileImage(args(0))
-        pathsFromFolder      = Util.getPathsFromFolder(args(1))
+        bufferedImagePattern = ImageUtil.loadFileImage(args(0))
+        pathsFromFolder      = ImageUtil.getPathsFromFolder(args(1))
         resultPattern   <- processBufferedImage(bufferedImagePattern)
         resultListExams <- processImagePaths(pathsFromFolder)
         _               <- showResulFinalZIO(resultPattern, resultListExams)
@@ -104,7 +105,7 @@ object execute {
   ): ZIO[Writer[String], String, List[Exam]] =
     for {
       exams <- if (paths.nonEmpty) {
-        ZIO.collectAll(paths.map(r => processBufferedImage(Util.loadFileImage(r))))
+        ZIO.collectAll(paths.map(r => processBufferedImage(ImageUtil.loadFileImage(r))))
       } else log("incorrect folder path") *> ZIO.fail("incorrect folder path")
     } yield exams
 }

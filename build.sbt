@@ -6,7 +6,7 @@ scalaVersion := "2.12.10"
 
 fork in run := true
 
-javaOptions in run += "-Djava.library.path=/home/ernestochero/opencv-3.4.1/build/lib"
+javaOptions in run += "-Djava.library.path=/home/ernesto/opencv-3.4.1/build/lib"
 scalacOptions ++= Seq("-deprecation", "-feature")
 scalacOptions ++= Seq("-Ypartial-unification")
 scalacOptions += "-Ylog-classpath"
