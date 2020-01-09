@@ -1,7 +1,6 @@
 package modules
-
-import org.apache.log4j.Logger
+import org.log4s.getLogger
 
 object SkyBlueLogger {
-  implicit final val logger: Logger = org.apache.log4j.Logger.getLogger("BlueSkyLogger")
+  implicit final val logger: org.log4s.Logger = getLogger("BlueSkyLogger")
 }
