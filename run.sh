@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+echo "Running sbt assembly to create a jar package"
+sbt assembly
 for i in {1..2}
 do
 echo "Running blueSky $i time"

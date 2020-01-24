@@ -11,7 +11,7 @@ import org.opencv.core.Core
 object Server extends App {
   val appRunTime = Runtime(liveEnvironments, PlatformLive.Default)
   val services: ZIO[
-    Console with LoggingModule with ConfigurationModule with ImageUtilModule with QualifyModule,
+    AppEnvironment,
     Throwable,
     Unit
   ] =

@@ -10,7 +10,11 @@ import zio.blocking.Blocking
 
 import scala.concurrent.Future
 object ZIOHelpers {
-  type AppEnvironment = zio.ZEnv with ConfigurationModule with LoggingModule
+  type AppEnvironment = zio.ZEnv
+    with ConfigurationModule
+    with LoggingModule
+    with ImageUtilModule
+    with QualifyModule
   val liveEnvironments = new System.Live with Clock.Live with Console.Live with Blocking.Live
   with Random.Live with ConfigurationModule.Live with LoggingModule.Live with ImageUtilModule.Live
   with QualifyModule.Live
