@@ -6,11 +6,10 @@ import commons.Helpers._
 import commons.Constants._
 import org.opencv.imgproc.Imgproc
 import zio.ZIO
-
+import modules.SkyBlueLogger.logger
 import scala.collection.mutable.ListBuffer
 import scala.collection.JavaConverters._
-import modules.SkyBlueLogger.logger
-import modules.LoggingModule
+import modules.loggingModule.{ LoggingModule, info }
 import models._
 import org.opencv.aruco.Aruco
 object Qualify {
@@ -20,7 +19,7 @@ object Qualify {
                      img: Mat): ZIO[LoggingModule, Exception, Exam] =
     if (!corners.isEmpty && corners.size() == 4) {
       for {
-        _ <- LoggingModule.factory.info("qualify process - exam")
+        _ <- info("qualify process - exam")
         pointsWithCenter = getCornersTuple(ids, corners.asScala.toList)
           .flatMap(markWithCode => {
             Map(markWithCode.id -> getCenterSquare(markWithCode.id, markWithCode.mat))
@@ -34,7 +33,7 @@ object Qualify {
         alternativesResult = getAnswersOfMatrix(alternativesContours)
       } yield Exam(codeResult, alternativesResult)
     } else {
-      LoggingModule.factory.info(s"impossible to process this list of corners") *> ZIO.fail(
+      info(s"impossible to process this list of corners") *> ZIO.fail(
         new Exception("Error in corners")
       )
     }
@@ -65,7 +64,7 @@ object Qualify {
             .toList
         }
       case _ =>
-        LoggingModule.factory.info(s"not match typeSection") *> ZIO.fail(
+        info(s"not match typeSection") *> ZIO.fail(
           new Exception("match error")
         )
     }
@@ -73,7 +72,7 @@ object Qualify {
   def findContoursOperation(img: Mat,
                             typeSection: String): ZIO[LoggingModule, Exception, List[List[Int]]] =
     for {
-      _ <- LoggingModule.factory.info(s"Starting contours operation in $typeSection")
+      _ <- info(s"Starting contours operation in $typeSection")
       out      = new Mat(img.rows(), img.cols(), CvType.CV_8UC3)
       contours = ListBuffer(List[MatOfPoint](): _*).asJava
       closed   = img.closeOperation
@@ -88,7 +87,7 @@ object Qualify {
       result <- if (contoursList.length == quantity)
         findContoursOperationProcess(groupDivide, typeSection, contoursList, closed)
       else
-        LoggingModule.factory.info(
+        info(
           s"[$typeSection] number of contours below limit ${contoursList.length} < $quantity"
         ) *> ZIO
           .fail(new Exception("contours below limit"))
@@ -96,7 +95,7 @@ object Qualify {
 
   def qualifyTemplate(img: Mat): ZIO[LoggingModule, Exception, Exam] =
     for {
-      _ <- LoggingModule.factory.info(s"Starting ...")
+      _ <- info(s"Starting ...")
       dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_4X4_50)
       corners    = ListBuffer(List[Mat](): _*).asJava
       ids        = new Mat()
@@ -122,7 +121,7 @@ object Qualify {
       squareFound <- if (!contours.isEmpty)
         ZIO.succeed(findSquare(contours.asScala.sortWith(sortMatOfPoint).toList))
       else
-        LoggingModule.factory.info("failed is Empty") *> ZIO.fail(new Exception("contours empty"))
+        info("failed is Empty") *> ZIO.fail(new Exception("contours empty"))
       square <- ZIO.fromOption(squareFound).mapError(_ => new Exception("squareFound is None"))
       pointsSorted = sortPoints(square, new Point(0, 0))
       measures     = getSizeOfQuad(pointsSorted)
@@ -138,5 +137,4 @@ object Qualify {
       destImageDilated = destImage.dilatationOperation
     } yield destImageDilated
   }
-
 }

@@ -4,30 +4,16 @@ import zio._
 import commons.ZIOHelpers._
 import commons.Utils.BufferedImageOps
 import commons.ImageUtil.getPathsFromFolder
-import modules.configurationModule.{ ConfigurationModule, configuration }
-import modules.imageUtilModule.ImageUtilModule
+import commons.blueSkyEnv
 import org.opencv.core.Core
-import modules.loggingModule.{ LoggingModule, info }
-import modules.qualifyModule.{ QualifyModule, _ }
-
-/*object blueSkyEnv {
-  type BlueSkyEnv = LoggingModule with ConfigurationModule with ImageUtilModule with QualifyModule
-
-  object BlueSkyEnv {
-    val any: ZLayer[BlueSkyEnv, Nothing, BlueSkyEnv] =
-      ZLayer.requires[BlueSkyEnv]
-
-    val live: ZLayer.NoDeps[Nothing, BlueSkyEnv] = {
-      ConfigurationModule.live ++  ImageUtilModule.live ++
-        (LoggingModule.live >>> QualifyModule.live)
-    }
-  }
-}*/
+import modules.loggingModule.info
+import modules.qualifyModule._
 
 object Server extends App {
-  val appRunTime = Runtime.unsafeFromLayer(liveEnvironments, platform).environment
+  val appRunTime: zio.ZEnv with blueSkyEnv.BlueSkyEnv =
+    Runtime.unsafeFromLayer(liveEnvironments, platform).environment
   val services: ZIO[
-    zio.ZEnv with LoggingModule with ConfigurationModule with ImageUtilModule with QualifyModule,
+    zio.ZEnv with blueSkyEnv.BlueSkyEnv,
     Throwable,
     Unit
   ] =
@@ -59,7 +45,7 @@ object Server extends App {
       _ <- info(s"Total of Exams Analyzed = ${resultGroup.length}")
     } yield ()
 
-  override def run(args: List[String]): ZIO[zio.ZEnv, Nothing, Int] = {
+  override def run(args: List[String]) = {
     System.loadLibrary(Core.NATIVE_LIBRARY_NAME)
     services.provide(appRunTime).fold(_ => 1, _ => 0)
   }

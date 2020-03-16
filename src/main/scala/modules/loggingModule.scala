@@ -1,7 +1,6 @@
 package modules
 import org.log4s.Logger
 import zio.{ Has, UIO, ZIO, ZLayer }
-import modules.configurationModule.ConfigurationModule
 
 package object loggingModule {
   type LoggingModule = Has[LoggingModule.Service]
@@ -17,7 +16,7 @@ package object loggingModule {
         implicit logger: Logger
       ): ZIO[LoggingModule, Nothing, Unit]
     }
-    val live: ZLayer.NoDeps[Nothing, ConfigurationModule] =
+    val live: ZLayer.NoDeps[Nothing, LoggingModule] =
       ZLayer.succeed {
         new Service {
           override def debug(

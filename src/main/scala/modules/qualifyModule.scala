@@ -15,7 +15,8 @@ package object qualifyModule {
       def showResultFinal(pattern: Exam, exams: List[Exam]): ZIO[LoggingModule, Nothing, Unit]
       def process(matImg: Mat): ZIO[LoggingModule with QualifyModule, Exception, Exam]
     }
-    val live =
+
+    val live: ZLayer[Has[LoggingModule.Service], Nothing, Has[Service]] =
       ZLayer.fromService[LoggingModule.Service, QualifyModule.Service] {
         logging: LoggingModule.Service =>
           new Service {
