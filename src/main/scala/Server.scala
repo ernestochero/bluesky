@@ -1,4 +1,4 @@
-import zio.{ Runtime, ZIO, ZLayer }
+import zio.{ Runtime, ZIO }
 import modules.SkyBlueLogger.logger
 import zio._
 import commons.ZIOHelpers._
@@ -21,15 +21,14 @@ object Server extends App {
       loadedConfiguration <- modules.configurationModule.configuration
       _                   <- info(s"Starting Program ${loadedConfiguration.appName}")
       t0 = System.nanoTime()
-      imageUtilMod    <- modules.imageUtilModule.imageUtil
-      bufferedPattern <- imageUtilMod.getBufferedImage(loadedConfiguration.examPath.pattern)
+      bufferedPattern    <- modules.imageUtilModule.getBufferedImage(loadedConfiguration.examPath.pattern)
       pathsFromFolder = getPathsFromFolder(loadedConfiguration.examPath.group)
       resultPattern <- process(bufferedPattern.toMat)
       resultGroup <- if (pathsFromFolder.nonEmpty) {
         ZIO.collectAll {
           pathsFromFolder.map(r => {
             for {
-              bufferedImg <- imageUtilMod.getBufferedImage(r)
+              bufferedImg <- modules.imageUtilModule.getBufferedImage(r)
               exam        <- process(bufferedImg.toMat)
             } yield exam
           })
