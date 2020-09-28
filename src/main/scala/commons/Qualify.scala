@@ -5,13 +5,15 @@ import commons.Utils._
 import commons.Helpers._
 import commons.Constants._
 import org.opencv.imgproc.Imgproc
-import zio.ZIO
+import zio.{ UIO, ZIO }
 import modules.SkyBlueLogger.logger
+
 import scala.collection.mutable.ListBuffer
 import scala.collection.JavaConverters._
 import modules.loggingModule.{ LoggingModule, info }
 import models._
 import org.opencv.aruco.Aruco
+import Helpers.Contours
 object Qualify {
 
   def qualifyProcess(corners: java.util.List[Mat],
@@ -38,31 +40,30 @@ object Qualify {
       )
     }
 
+  def findContoursFunction(groupLength: Int,
+                           contoursList: List[MatOfPoint],
+                           img: Mat,
+                           firstGroup: Int,
+                           secondGroup: Int): UIO[Contours[Int]] =
+    ZIO.succeed(
+      sortedGroups(contoursList, firstGroup)
+        .grouped(groupLength)
+        .map(
+          sortedGroups(_, secondGroup)
+            .map(bubble => evaluateBubble(bubble, img))
+        )
+        .toList
+    )
+
   def findContoursOperationProcess(groupLength: Int,
                                    typeSection: String,
                                    contoursList: List[MatOfPoint],
-                                   img: Mat): ZIO[LoggingModule, Exception, List[List[Int]]] =
+                                   img: Mat): ZIO[LoggingModule, Exception, Contours[Int]] =
     typeSection match {
       case ANSWER =>
-        ZIO.succeed {
-          (sortedGroups(contoursList, VERTICALLY)
-            .grouped(groupLength)
-            .map(
-              sortedGroups(_, HORIZONTALLY)
-                .map(bubble => evaluateBubble(bubble, img))
-            ))
-            .toList
-        }
+        findContoursFunction(groupLength, contoursList, img, VERTICALLY, HORIZONTALLY)
       case CODE =>
-        ZIO.succeed {
-          (sortedGroups(contoursList, HORIZONTALLY)
-            .grouped(groupLength)
-            .map(
-              sortedGroups(_, VERTICALLY)
-                .map(bubble => evaluateBubble(bubble, img))
-            ))
-            .toList
-        }
+        findContoursFunction(groupLength, contoursList, img, HORIZONTALLY, VERTICALLY)
       case _ =>
         info(s"not match typeSection") *> ZIO.fail(
           new Exception("match error")
@@ -70,20 +71,15 @@ object Qualify {
     }
 
   def findContoursOperation(img: Mat,
-                            typeSection: String): ZIO[LoggingModule, Exception, List[List[Int]]] =
+                            typeSection: String): ZIO[LoggingModule, Exception, Contours[Int]] = {
+    val out      = new Mat(img.rows(), img.cols(), CvType.CV_8UC3)
+    val contours = ListBuffer(List[MatOfPoint](): _*).asJava
+    val closed   = img.closeOperation
+    Imgproc.findContours(closed, contours, out, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
+    val contoursList = contours.asScala.filter(filterContour).toList
+    val (quantity, groupDivide) =
+      if (typeSection == ANSWER) (numberContoursOfAnswers, 20) else (numberContoursOfCodes, 10)
     for {
-      _ <- info(s"Starting contours operation in $typeSection")
-      out      = new Mat(img.rows(), img.cols(), CvType.CV_8UC3)
-      contours = ListBuffer(List[MatOfPoint](): _*).asJava
-      closed   = img.closeOperation
-      _ = Imgproc.findContours(closed,
-                               contours,
-                               out,
-                               Imgproc.RETR_EXTERNAL,
-                               Imgproc.CHAIN_APPROX_SIMPLE)
-      contoursList = contours.asScala.filter(filterContour).toList
-      (quantity, groupDivide) = if (typeSection == ANSWER) (numberContoursOfAnswers, 20)
-      else (numberContoursOfCodes, 10)
       result <- if (contoursList.length == quantity)
         findContoursOperationProcess(groupDivide, typeSection, contoursList, closed)
       else
@@ -92,6 +88,7 @@ object Qualify {
         ) *> ZIO
           .fail(new Exception("contours below limit"))
     } yield result
+  }
 
   def qualifyTemplate(img: Mat): ZIO[LoggingModule, Exception, Exam] =
     for {
@@ -122,7 +119,7 @@ object Qualify {
         ZIO.succeed(findSquare(contours.asScala.sortWith(sortMatOfPoint).toList))
       else
         info("failed is Empty") *> ZIO.fail(new Exception("contours empty"))
-      square <- ZIO.fromOption(squareFound).mapError(_ => new Exception("squareFound is None"))
+      square <- ZIO.fromOption(squareFound).orElseFail(new Exception("squareFound is None"))
       pointsSorted = sortPoints(square, new Point(0, 0))
       measures     = getSizeOfQuad(pointsSorted)
       destImage    = new Mat(measures._2.toInt, measures._1.toInt, mat.`type`())

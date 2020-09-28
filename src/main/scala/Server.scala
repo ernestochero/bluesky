@@ -20,19 +20,19 @@ object Server extends App {
     for {
       loadedConfiguration <- modules.configurationModule.configuration
       _                   <- info(s"Starting Program ${loadedConfiguration.appName}")
-      t0 = System.nanoTime()
-      bufferedPattern    <- modules.imageUtilModule.getBufferedImage(loadedConfiguration.examPath.pattern)
+      bufferedPattern <- modules.imageUtilModule.getBufferedImage(
+        loadedConfiguration.examPath.pattern
+      )
       pathsFromFolder = getPathsFromFolder(loadedConfiguration.examPath.group)
+      t0              = System.nanoTime()
       resultPattern <- process(bufferedPattern.toMat)
       resultGroup <- if (pathsFromFolder.nonEmpty) {
-        ZIO.collectAll {
-          pathsFromFolder.map(r => {
-            for {
-              bufferedImg <- modules.imageUtilModule.getBufferedImage(r)
-              exam        <- process(bufferedImg.toMat)
-            } yield exam
-          })
-        }
+        ZIO.foreach(pathsFromFolder)(r => {
+          for {
+            bufferedImg <- modules.imageUtilModule.getBufferedImage(r)
+            exam        <- process(bufferedImg.toMat)
+          } yield exam
+        })
       } else {
         info("incorrect folder path") *> ZIO.fail(
           new Exception("incorrect folder path")

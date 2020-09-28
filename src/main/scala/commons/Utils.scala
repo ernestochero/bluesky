@@ -6,16 +6,16 @@ import org.opencv.core.{ CvType, Mat, Size }
 import org.opencv.imgproc.Imgproc
 
 object Utils {
-
+  private def buildData(width: Int, height: Int, out: Mat): Array[Byte] =
+    new Array[Byte](width * height * out.elemSize().toInt)
   implicit final class BufferedImageOps(private val bufferedImage: BufferedImage) extends AnyVal {
     def toMat: Mat = {
       val width  = bufferedImage.getWidth()
       val height = bufferedImage.getHeight()
-      val mat = bufferedImage.getType match {
+      bufferedImage.getType match {
         case BufferedImage.TYPE_INT_RGB =>
-          val out = new Mat(bufferedImage.getHeight, bufferedImage.getWidth, CvType.CV_8UC3)
-          val data =
-            new Array[Byte](width * height * out.elemSize.asInstanceOf[Int])
+          val out      = new Mat(bufferedImage.getHeight, bufferedImage.getWidth, CvType.CV_8UC3)
+          val data     = buildData(width, height, out)
           val dataBuff = bufferedImage.getRGB(0, 0, width, height, null, 0, width)
           for ((x, i) <- dataBuff.view.zipWithIndex) {
             data(i * 3) = ((x >> 16) & 0xFF).asInstanceOf[Byte]
@@ -25,9 +25,8 @@ object Utils {
           out.put(0, 0, data)
           out
         case _ =>
-          val out = new Mat(bufferedImage.getHeight, bufferedImage.getWidth, CvType.CV_8UC1)
-          val data =
-            new Array[Byte](width * height * out.elemSize.asInstanceOf[Int])
+          val out      = new Mat(bufferedImage.getHeight, bufferedImage.getWidth, CvType.CV_8UC1)
+          val data     = buildData(width, height, out)
           val dataBuff = bufferedImage.getRGB(0, 0, width, height, null, 0, width)
           for ((x, i) <- dataBuff.view.zipWithIndex) {
             data(i) = ((0.21 * ((x >> 16) & 0xFF)) +
@@ -38,7 +37,6 @@ object Utils {
           out.put(0, 0, data)
           out
       }
-      mat
     }
   }
 
@@ -46,8 +44,7 @@ object Utils {
     def toBufferedImage: BufferedImage = {
       val width  = mat.cols()
       val height = mat.rows()
-      val data =
-        new Array[Byte](mat.rows * mat.cols * mat.elemSize.asInstanceOf[Int])
+      val data   = buildData(width, height, mat)
       mat.get(0, 0, data)
       val _type = mat.channels match {
         case 1 => BufferedImage.TYPE_BYTE_GRAY

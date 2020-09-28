@@ -8,6 +8,7 @@ import org.opencv.imgproc.Imgproc
 import scala.util.control.Breaks.{ break, breakable }
 
 object Helpers {
+  type Contours[A] = List[List[A]]
   import Constants._
   def getCornersTuple(ids: Mat, corners: List[Mat]): List[Mark] =
     corners
@@ -65,32 +66,27 @@ object Helpers {
     else 0
   }
 
-  def getCodeOfMatrix(matrix: List[List[Int]]): List[Answer] = {
-    def f(group: List[Int]): Char = {
-      val sumMarks = group.sum
-      if (sumMarks == 0) 'y'
-      else if (sumMarks == 1) s"${group.indexOf(1)}".charAt(0)
-      else 'x'
-    }
-    val result = matrix.foldLeft((List.empty[Answer], 0)) { (acc, value) =>
-      (acc._1 :+ Answer(acc._2, f(value), CODE), acc._2 + 1)
-    }
-    result._1.sortBy(_.index)
+  def detectMark(group: List[Int], f: => Char): Char = {
+    val sumMarks = group.sum
+    if (sumMarks == 0) 'y'
+    else if (sumMarks == 1) f
+    else 'x'
   }
 
-  def getAnswersOfMatrix(matrix: List[List[Int]]): List[Answer] = {
+  def getCodeOfMatrix(matrix: Contours[Int]): List[Answer] =
+    matrix
+      .foldLeft((List.empty[Answer], 0)) { (acc, group) =>
+        (acc._1 :+ Answer(acc._2, detectMark(group, s"${group.indexOf(1)}".charAt(0)), CODE),
+         acc._2 + 1)
+      }
+      ._1
+      .sortBy(_.index)
 
-    def f(group: List[Int], env: Map[Int, Char]): Char = {
-      val sumMarks = group.sum
-      if (sumMarks == 0) 'y'
-      else if (sumMarks == 1) env(group.indexOf(1))
-      else 'x'
-    }
-
+  def getAnswersOfMatrix(matrix: Contours[Int]): List[Answer] =
     matrix
       .foldLeft((List.empty[Answer], 1)) { (acc, value) =>
         val env   = Map(0 -> 'a', 1 -> 'b', 2 -> 'c', 3 -> 'd', 4 -> 'e')
-        val chars = value.grouped(5).map(f(_, env)).toArray
+        val chars = value.grouped(5).map(group => detectMark(group, env(group.indexOf(1)))).toArray
         val answers = chars
           .foldLeft((List.empty[Answer], 0)) { (a, b) =>
             (a._1 :+ Answer(acc._2 + a._2, b, ANSWER), a._2 + 25)
@@ -100,7 +96,6 @@ object Helpers {
       }
       ._1
       .sortBy(_.index)
-  }
 
   def getSizeOfQuad(points: MatOfPoint2f): (Double, Double) = {
     val arr    = points.toArray
