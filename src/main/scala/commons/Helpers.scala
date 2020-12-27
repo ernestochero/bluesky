@@ -5,6 +5,8 @@ import org.opencv.core
 import org.opencv.core.{ Core, CvType, Mat, MatOfPoint, MatOfPoint2f, Point, Scalar }
 import org.opencv.imgproc.Imgproc
 
+import java.io.File
+import javax.imageio.ImageIO
 import scala.util.control.Breaks.{ break, breakable }
 
 object Helpers {
@@ -157,4 +159,9 @@ object Helpers {
     square
   }
 
+  def writeImage(name: String, mat: Mat): Unit = {
+    import commons.Utils._
+    val file = new File(s"/home/ernestochero/Documents/bluesky/src/main/resources/$name.png")
+    ImageIO.write(mat.toBufferedImage, "png", file)
+  }
 }

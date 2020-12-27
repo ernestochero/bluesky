@@ -23,11 +23,11 @@ object Server extends App {
       bufferedPattern <- modules.imageUtilModule.getBufferedImage(
         loadedConfiguration.examPath.pattern
       )
-      pathsFromFolder = getPathsFromFolder(loadedConfiguration.examPath.group)
-      t0              = System.nanoTime()
+      pathsFromFolder <- getPathsFromFolder(loadedConfiguration.examPath.group)
+      t0 = System.nanoTime()
       resultPattern <- process(bufferedPattern.toMat)
       resultGroup <- if (pathsFromFolder.nonEmpty) {
-        ZIO.foreach(pathsFromFolder)(r => {
+        ZIO.foreachPar(pathsFromFolder)(r => {
           for {
             bufferedImg <- modules.imageUtilModule.getBufferedImage(r)
             exam        <- process(bufferedImg.toMat)
