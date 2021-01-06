@@ -12,12 +12,12 @@ import scala.util.control.Breaks.{ break, breakable }
 object Helpers {
   type Contours[A] = List[List[A]]
   import Constants._
-  def getCornersTuple(ids: Mat, corners: List[Mat]): List[Mark] =
+  def getMarks(ids: Mat, corners: List[Mat]): List[Mark] =
     corners
-      .foldLeft((List[Mark](), 0)) { (result, value) =>
-        val id    = ids.get(result._2, 0)(0)
-        val index = result._2 + 1
-        (result._1 :+ Mark(id.toInt, value), index)
+      .foldLeft((List[Mark](), 0)) {
+        case ((marks, index), value) =>
+          val id = ids.get(index, 0).head.toInt
+          (marks :+ Mark(id, value), index + 1)
       }
       ._1
 
@@ -29,7 +29,7 @@ object Helpers {
       case CODE_12   => x2_y2
       case CODE_13   => x1_y1
       case ANSWER_42 => x2_y2
-      case _         => x1_y1
+      case ANSWER_45 => x1_y1
     }
   }
 
@@ -77,24 +77,30 @@ object Helpers {
 
   def getCodeOfMatrix(matrix: Contours[Int]): List[Answer] =
     matrix
-      .foldLeft((List.empty[Answer], 0)) { (acc, group) =>
-        (acc._1 :+ Answer(acc._2, detectMark(group, s"${group.indexOf(1)}".charAt(0)), CODE),
-         acc._2 + 1)
+      .foldLeft((List.empty[Answer], 0)) {
+        case ((answers, index), group) =>
+          (answers :+ Answer(index, detectMark(group, s"${group.indexOf(1)}".charAt(0)), CODE),
+           index + 1)
       }
       ._1
       .sortBy(_.index)
 
   def getAnswersOfMatrix(matrix: Contours[Int]): List[Answer] =
     matrix
-      .foldLeft((List.empty[Answer], 1)) { (acc, value) =>
-        val env   = Map(0 -> 'a', 1 -> 'b', 2 -> 'c', 3 -> 'd', 4 -> 'e')
-        val chars = value.grouped(5).map(group => detectMark(group, env(group.indexOf(1)))).toArray
-        val answers = chars
-          .foldLeft((List.empty[Answer], 0)) { (a, b) =>
-            (a._1 :+ Answer(acc._2 + a._2, b, ANSWER), a._2 + 25)
-          }
-          ._1
-        (acc._1 ++ answers, acc._2 + 1)
+      .foldLeft((List.empty[Answer], 1)) {
+        case ((generalAnswers, generalIndex), alternativeGroup) =>
+          val env = Map(0 -> 'a', 1 -> 'b', 2 -> 'c', 3 -> 'd', 4 -> 'e')
+          val alternatives = alternativeGroup
+            .grouped(5)
+            .map(group => detectMark(group, env(group.indexOf(1))))
+            .toArray
+          val groupAnswers = alternatives
+            .foldLeft((List.empty[Answer], 0)) {
+              case ((answers, index), alternative) =>
+                (answers :+ Answer(generalIndex + index, alternative, ANSWER), index + 25)
+            }
+            ._1
+          (generalAnswers ++ groupAnswers, generalIndex + 1)
       }
       ._1
       .sortBy(_.index)

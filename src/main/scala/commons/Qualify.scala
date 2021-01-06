@@ -22,15 +22,15 @@ object Qualify {
     if (!corners.isEmpty && corners.size() == 4) {
       for {
         _ <- info("qualify process - exam")
-        pointsWithCenter = getCornersTuple(ids, corners.asScala.toList)
-          .flatMap(markWithCode => {
-            Map(markWithCode.id -> getCenterSquare(markWithCode.id, markWithCode.mat))
+        pointsWithCenter = getMarks(ids, corners.asScala.toList)
+          .flatMap(mark => {
+            Map(mark.id -> getCenterSquare(mark.id, mark.mat))
           })
           .toMap
         codeMat         = getSubMat(pointsWithCenter(CODE_12), pointsWithCenter(CODE_13), img)
-        alternativesMap = getSubMat(pointsWithCenter(ANSWER_42), pointsWithCenter(ANSWER_45), img)
+        alternativesMat = getSubMat(pointsWithCenter(ANSWER_42), pointsWithCenter(ANSWER_45), img)
         codeContours         <- findContoursOperation(codeMat.thresholdOperation, CODE)
-        alternativesContours <- findContoursOperation(alternativesMap.thresholdOperation, ANSWER)
+        alternativesContours <- findContoursOperation(alternativesMat.thresholdOperation, ANSWER)
         codeResult         = getCodeOfMatrix(codeContours)
         alternativesResult = getAnswersOfMatrix(alternativesContours)
       } yield Exam(codeResult, alternativesResult)
